@@ -429,3 +429,13 @@
   right: 0;
   border-top: none;
 }
+
+.estructura-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.contenido-app {
+  flex: 1;
+}

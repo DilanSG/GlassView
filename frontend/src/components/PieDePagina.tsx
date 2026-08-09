@@ -4,7 +4,7 @@ export default function PieDePagina() {
       <p>
         GlassView2.0 © 2026{' '}
         <span className="marca-into-code">IntoCode</span> — Desarrollado por
-        Dilan Acuña y Axil Anzola
+        Dilan Acuña y Axl Anzola
       </p>
     </footer>
   );

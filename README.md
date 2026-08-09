@@ -104,4 +104,4 @@ GlassView2.0 es un **producto comercial** de IntoCode. El código fuente es púb
 
 ## Créditos
 
-**GlassView2.0 © 2026 IntoCode** — Desarrollado por **Dilan Acuña** y **Axil Anzola**.
+**GlassView2.0 © 2026 IntoCode** — Desarrollado por **Dilan Acuña** y **Axl Anzola**.

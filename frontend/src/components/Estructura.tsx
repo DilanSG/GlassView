@@ -4,10 +4,12 @@ import PieDePagina from './PieDePagina';
 
 export default function Estructura() {
   return (
-    <>
+    <div className="estructura-app">
       <BarraNavegacion />
-      <Outlet />
+      <main className="contenido-app">
+        <Outlet />
+      </main>
       <PieDePagina />
-    </>
+    </div>
   );
 }
