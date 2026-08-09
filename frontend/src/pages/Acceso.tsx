@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { guardarToken, verificarPin } from '../api/clienteApi';
+import PieDePagina from '../components/PieDePagina';
 
 export default function Acceso() {
   const [pin, setPin] = useState('');
@@ -47,6 +48,7 @@ export default function Acceso() {
           {cargando ? 'Comprobando...' : 'Entrar'}
         </button>
       </form>
+      <PieDePagina />
     </div>
   );
 }

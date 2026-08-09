@@ -97,3 +97,11 @@ En desarrollo, Vite redirige `/api` al backend local (`http://localhost:4000`) m
 - **[Guía para desarrolladores](README.DESARROLLADORES.md)** — cómo está estructurado el código y cómo ampliarlo.
 - **[Swagger UI](http://localhost:4000/api/docs)** — documentación interactiva de la API (endpoints, cuerpos y respuestas).
 - **[AGENTS.md](AGENTS.md)** — convenciones de código: identificadores en español, buenas prácticas.
+
+## Licencia
+
+GlassView2.0 es un **producto comercial** de IntoCode. El código fuente es público para su lectura y estudio, pero **su funcionalidad no puede copiarse ni utilizarse con fines comerciales** sin una licencia comercial de IntoCode. Ver **[LICENSE](LICENSE)** para los términos completos.
+
+## Créditos
+
+**GlassView2.0 © 2026 IntoCode** — Desarrollado por **Dilan Acuña** y **Axil Anzola**.

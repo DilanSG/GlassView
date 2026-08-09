@@ -404,3 +404,28 @@
   justify-content: center;
   margin-bottom: 1.2rem;
 }
+
+.pie-pagina {
+  border-top: 1px solid var(--border);
+  padding: 0.9rem 1.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.pie-pagina p {
+  margin: 0;
+}
+
+.pie-pagina .marca-into-code {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pantalla-acceso .pie-pagina {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: none;
+}

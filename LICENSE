@@ -1,0 +1,47 @@
+# Licencia Comercial GlassView2.0 — IntoCode
+
+**Copyright © 2026 IntoCode**
+**Desarrollado por Dilan Acuña y Axil Anzola**
+
+Este documento constituye la única licencia de uso del programa **GlassView2.0** (en adelante, "el Programa"), incluyendo todo su código fuente, su documentación, sus recursos y sus archivos de configuración.
+
+## Definiciones
+
+- **Licenciante**: IntoCode (Dilan Acuña y Axil Anzola), titulares de todos los derechos sobre el Programa.
+- **Programa**: GlassView2.0 y todos los archivos y elementos que lo componen.
+- **Uso comercial**: cualquier empleo del Programa o de su funcionalidad que genere o pueda generar ingresos, directa o indirectamente, incluyendo la venta, el alquiler, la integración en productos de pago o el desarrollo de software de cobro que lo aproveche.
+
+## Derechos otorgados
+
+Queda permitido, de forma gratuita y sin autorización previa:
+
+1. **Leer, ver y estudiar** el código fuente del Programa.
+2. **Copiar el código** para análisis, aprendizaje o inspección personal, sin distribuirlo ni explotarlo.
+3. **Distribuir el repositorio tal cual** con fines de difusión técnica y educativa, siempre que se conserve esta licencia, el aviso de copyright y la atribución de autoría completa en cualquier copia o parte sustancial del mismo.
+
+## Restricciones (prohibido)
+
+Queda **expresamente prohibido**, salvo acuerdo comercial escrito con el Licenciante:
+
+1. **Copiar la funcionalidad**: copiar, imitar, adaptar o reimplementar la lógica de negocio, los cálculos (incluido el despiece de ventanería), la generación de piezas, los presets o cualquier funcionalidad del Programa en otro producto propio o de terceros.
+2. **Uso comercial**: usar, vender, alquilar, sublicenciar o explotar comercialmente el Programa o cualquiera de sus partes.
+3. **Distribución modificada**: distribuir, publicar o compartir versiones modificadas del Programa, totales o parciales, con o sin fines de lucro, sin permiso por escrito del Licenciante.
+4. **Eliminación de autoría**: retirar, ocultar o modificar los avisos de copyright, la marca de autoría (IntoCode o los nombres de los desarrolladores) o esta licencia.
+
+## Licencias comerciales
+
+El Programa es **comercial**: IntoCode vende el sistema completo y licencias de uso a quien desee utilizarlo con fines comerciales. Cualquier uso comercial sin licencia comercial otorgada por escrito constituye una infracción de los derechos de autor y dará lugar a las acciones legales correspondientes.
+
+Para adquirir una licencia comercial, contáctate con **IntoCode**.
+
+## Ausencia de garantía
+
+EL PROGRAMA SE PROPORCIONA **"TAL CUAL"**, SIN GARANTÍAS DE NINGÚN TIPO, EXPRESAS O IMPLÍCITAS, INCLUIDAS, ENTRE OTRAS, LAS GARANTÍAS DE COMERCIABILIDAD, ADECUACIÓN A UN FIN PARTICULAR O NO VIOLACIÓN. EN NINGÚN CASO EL LICENCIANTE SERÁ RESPONSABLE DE CUALQUIER DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL O CONSECUENTE DERIVADO DEL USO DEL PROGRAMA, AUNQUE SE LE HAYA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.
+
+## Vigencia y disposiciones finales
+
+1. Esta licencia tiene **vigencia permanente** y no expira por el transcurso del tiempo.
+2. El Licenciante puede conceder licencias comerciales particulares con derechos distintos a los de esta licencia; dichas concesiones no afectarán a esta Licencia Pública.
+3. Si cualquier disposición de esta licencia se considerara nula o inaplicable, las demás disposiciones permanecerán en pleno y vigor.
+
+**GlassView2.0 — desarrollado con dedicación por IntoCode: Dilan Acuña y Axil Anzola.**
