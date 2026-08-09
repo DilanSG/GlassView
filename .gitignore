@@ -1,0 +1,40 @@
+# ── Dependencias ─────────────────────────────────────────────
+node_modules/
+**/node_modules/
+
+# ── Builds y compilación ─────────────────────────────────────
+dist/
+**/dist/
+*.tsbuildinfo
+
+# ── Entorno y secretos ───────────────────────────────────────
+.env
+.env.*
+!.env.example
+.env.local
+.env.production
+
+# ── Logs y temporales ────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+*.tmp
+*.swp
+*~
+
+# ── Sistema operativo y editores ─────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.code-workspace
+
+# ── Cobertura y pruebas puntuales ────────────────────────────
+coverage/
+frontend/test_pdf_fix.mjs
+
+# ── Caché de herramientas ────────────────────────────────────
+frontend/.vite/
+*.cache
+.eslintcache

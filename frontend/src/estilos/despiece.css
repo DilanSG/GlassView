@@ -1,0 +1,261 @@
+.panel-lateral {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 76vh;
+  overflow-y: auto;
+}
+
+.panel-lateral .panel-despiece {
+  width: auto;
+}
+
+.panel-piezas {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+}
+
+.panel-piezas h2 {
+  margin: 0 0 0.7rem;
+  font-size: 1rem;
+}
+
+.lista-piezas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.lista-piezas-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.lista-piezas-item:hover {
+  background-color: var(--bg-pressed);
+}
+
+.lista-piezas-item.activo {
+  background-color: var(--bg-pressed);
+  border-color: var(--accent, #2e7d32);
+}
+
+.pieza-badge {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pieza-badge-perfil {
+  background-color: #7d8a99;
+}
+
+.pieza-badge-vidrio {
+  background-color: #4ea5d9;
+}
+
+.pieza-badge-herraje {
+  background-color: #e0a641;
+}
+
+.pieza-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pieza-nombre {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pieza-meta {
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lista-piezas-eliminar {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.lista-piezas-eliminar:hover {
+  color: #c0392b;
+  background-color: rgba(192, 57, 43, 0.12);
+}
+
+.panel-despiece {
+  width: 320px;
+  flex-shrink: 0;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  max-height: 74vh;
+  overflow: auto;
+}
+
+.despiece-medida {
+  margin: 0.15rem 0 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.despiece-resumen {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  background-color: var(--bg-tertiary);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.6rem;
+}
+
+.despiece-detalle details {
+  margin-bottom: 0.6rem;
+}
+
+.despiece-detalle summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.lista-despiece {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fila-despiece {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.fila-despiece small {
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+}
+
+.despiece-cantidad {
+  color: var(--text-secondary);
+}
+
+.despiece-medida-cm {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.despiece-empaque {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0;
+}
+
+@media (max-width: 768px) {
+  .pantalla {
+    padding: 1.5rem 1rem;
+  }
+
+  .marca-navegacion {
+    font-size: 1.3rem;
+  }
+
+  .barra-navegacion {
+    height: 64px;
+    gap: 1rem;
+  }
+
+  .enlace-nav {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.88rem;
+  }
+
+  .lista-proyectos {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .editor-distribucion {
+    flex-direction: column;
+  }
+
+  .panel-nuevo-proyecto {
+    position: static;
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .seccion-cabecera {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .boton-primario {
+    width: 100%;
+  }
+
+  .tarjeta-acceso {
+    width: 100%;
+    max-width: 340px;
+    padding: 1.6rem;
+  }
+
+  .modal {
+    padding: 1.2rem;
+  }
+
+  .cabecera {
+    flex-wrap: wrap;
+  }
+
+  .acciones {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulso-fila {
+    display: none;
+  }
+}
