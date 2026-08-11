@@ -58,9 +58,20 @@ async function peticion<T>(ruta: string, opciones: RequestInit = {}): Promise<Re
     headers: cabeceras,
   });
 
-  const cuerpo = (await respuesta.json()) as RespuestaApi<T>;
-  if (!respuesta.ok || !cuerpo.exito) {
-    throw new ErrorApi(respuesta.status, cuerpo.mensaje ?? 'Error inesperado del servidor.');
+  const texto = await respuesta.text();
+  let cuerpo: RespuestaApi<T> | null = null;
+  try {
+    cuerpo = JSON.parse(texto) as RespuestaApi<T>;
+  } catch {
+    cuerpo = null;
+  }
+
+  if (!respuesta.ok || !cuerpo?.exito) {
+    throw new ErrorApi(
+      respuesta.status,
+      cuerpo?.mensaje ??
+        'La API no respondió correctamente. Comprueba que VITE_API_URL apunte al backend (sin "/api" al final).',
+    );
   }
 
   return cuerpo;

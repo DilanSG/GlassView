@@ -1,47 +1,169 @@
-# Licencia Comercial GlassView2.0 — IntoCode
+LICENCIA COMERCIAL DE SOFTWARE
+GLASSVIEW2.0
+IntoCode
 
-**Copyright © 2026 IntoCode**
-**Desarrollado por Dilan Acuña y Axl Anzola**
 
-Este documento constituye la única licencia de uso del programa **GlassView2.0** (en adelante, "el Programa"), incluyendo todo su código fuente, su documentación, sus recursos y sus archivos de configuración.
+AVISO DE COPYRIGHT
 
-## Definiciones
+Copyright (C) 2026 IntoCode. Todos los derechos reservados.
 
-- **Licenciante**: IntoCode (Dilan Acuña y Axl Anzola), titulares de todos los derechos sobre el Programa.
-- **Programa**: GlassView2.0 y todos los archivos y elementos que lo componen.
-- **Uso comercial**: cualquier empleo del Programa o de su funcionalidad que genere o pueda generar ingresos, directa o indirectamente, incluyendo la venta, el alquiler, la integración en productos de pago o el desarrollo de software de cobro que lo aproveche.
+GlassView2.0 es una obra de autoría de IntoCode, desarrollada por Dilan
+Acuña y Axl Anzola. Esta licencia ampara, sin limitación, el código
+fuente del programa, su documentación, sus recursos gráficos y sus
+archivos de configuración.
 
-## Derechos otorgados
 
-Queda permitido, de forma gratuita y sin autorización previa:
+1. OBJETO Y PARTES
 
-1. **Leer, ver y estudiar** el código fuente del Programa.
-2. **Copiar el código** para análisis, aprendizaje o inspección personal, sin distribuirlo ni explotarlo.
-3. **Distribuir el repositorio tal cual** con fines de difusión técnica y educativa, siempre que se conserve esta licencia, el aviso de copyright y la atribución de autoría completa en cualquier copia o parte sustancial del mismo.
+1.1. Este documento regula los términos y condiciones bajo los cuales
+el Licenciante autoriza el acceso, uso y explotación del programa y
+la obra denominada "GlassView2.0" (en adelante, "el Programa").
 
-## Restricciones (prohibido)
+1.2. Partes:
+  a) Licenciante: IntoCode, titular exclusivo de todos los derechos
+     de propiedad intelectual sobre el Programa.
+  b) Licenciatario: toda persona natural o jurídica que acceda,
+     copie, distribuya o utilice el Programa, total o parcialmente.
 
-Queda **expresamente prohibido**, salvo acuerdo comercial escrito con el Licenciante:
 
-1. **Copiar la funcionalidad**: copiar, imitar, adaptar o reimplementar la lógica de negocio, los cálculos (incluido el despiece de ventanería), la generación de piezas, los presets o cualquier funcionalidad del Programa en otro producto propio o de terceros.
-2. **Uso comercial**: usar, vender, alquilar, sublicenciar o explotar comercialmente el Programa o cualquiera de sus partes.
-3. **Distribución modificada**: distribuir, publicar o compartir versiones modificadas del Programa, totales o parciales, con o sin fines de lucro, sin permiso por escrito del Licenciante.
-4. **Eliminación de autoría**: retirar, ocultar o modificar los avisos de copyright, la marca de autoría (IntoCode o los nombres de los desarrolladores) o esta licencia.
+2. DEFINICIONES
 
-## Licencias comerciales
+2.1. "Programa": GlassView2.0 en su totalidad, incluidos su código
+fuente, código objeto, documentación, recursos, lógica de negocio,
+fórmulas y métodos de cálculo, y cualquier versión derivada de ellos.
 
-El Programa es **comercial**: IntoCode vende el sistema completo y licencias de uso a quien desee utilizarlo con fines comerciales. Cualquier uso comercial sin licencia comercial otorgada por escrito constituye una infracción de los derechos de autor y dará lugar a las acciones legales correspondientes.
+2.2. "Funcionalidad del Programa": cualquier resultado, capacidad o
+comportamiento del Programa, incluyendo, entre otros, sus cálculos de
+despiece, su generación de piezas y plantillas, su motor de medición,
+y todo procedimiento o algoritmo implementado en el Programa.
 
-Para adquirir una licencia comercial, contáctate con **IntoCode**.
+2.3. "Uso comercial": cualquier empleo del Programa o de su
+Funcionalidad que genere o pueda generar un beneficio económico,
+directo o indirecto, para el Licenciatario o para terceros.
 
-## Ausencia de garantía
+2.4. "Licencia comercial": autorización expresa, escrita y onerosa
+otorgada por el Licenciante, en los términos de la cláusula 5.
 
-EL PROGRAMA SE PROPORCIONA **"TAL CUAL"**, SIN GARANTÍAS DE NINGÚN TIPO, EXPRESAS O IMPLÍCITAS, INCLUIDAS, ENTRE OTRAS, LAS GARANTÍAS DE COMERCIABILIDAD, ADECUACIÓN A UN FIN PARTICULAR O NO VIOLACIÓN. EN NINGÚN CASO EL LICENCIANTE SERÁ RESPONSABLE DE CUALQUIER DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL O CONSECUENTE DERIVADO DEL USO DEL PROGRAMA, AUNQUE SE LE HAYA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.
 
-## Vigencia y disposiciones finales
+3. CONCESION DE DERECHOS
 
-1. Esta licencia tiene **vigencia permanente** y no expira por el transcurso del tiempo.
-2. El Licenciante puede conceder licencias comerciales particulares con derechos distintos a los de esta licencia; dichas concesiones no afectarán a esta Licencia Pública.
-3. Si cualquier disposición de esta licencia se considerara nula o inaplicable, las demás disposiciones permanecerán en pleno y vigor.
+El Licenciante otorga al Licenciatario, de forma gratuita, no
+exclusiva, intransferible y revocable, los siguientes derechos:
 
-**GlassView2.0 — desarrollado con dedicación por IntoCode: Dilan Acuña y Axl Anzola.**
+3.1. Derecho de lectura y estudio: acceder y leer el código fuente
+del Programa con fines de análisis, aprendizaje o inspección.
+
+3.2. Derecho de copia privada: realizar copias del código para uso
+personal de análisis, sin distribuirlas ni explotarlas.
+
+3.3. Derecho de difusión técnica: distribuir el repositorio del
+Programa tal cual, siempre que se conserve íntegramente este aviso
+de licencia, el aviso de copyright y la atribución de autoría.
+
+
+4. RESTRICCIONES EXPRESAS
+
+Queda expresamente prohibido, sin la previa Licencia comercial
+otorgada por escrito por el Licenciante:
+
+4.1. Copiar o imitar la Funcionalidad del Programa, total o
+parcialmente, para incorporarla a otro software, propio o de
+terceros, o para reimplementarla por cualquier medio.
+
+4.2. Utilizar el Programa o su Funcionalidad con fines comerciales,
+incluyendo la venta, el alquiler, la sublicencia o la integración en
+productos o servicios de pago.
+
+4.3. Distribuir, publicar o compartir versiones modificadas del
+Programa, totales o parciales, con o sin fines de lucro.
+
+4.4. Omitir, alterar o eliminar los avisos de copyright, la
+indicación de autoría o este documento de licencia en cualquier
+copia o parte sustancial del Programa.
+
+4.5. Realizar ingeniería inversa, descompilación o desensamblaje de
+los componentes del Programa con fines de apropiación de su
+Funcionalidad.
+
+La contravención de cualquiera de estas restricciones constituirá una
+infracción de los derechos de propiedad intelectual del Licenciante y
+dará lugar al ejercicio de las acciones legales correspondientes.
+
+
+5. LICENCIAS COMERCIALES
+
+5.1. El Programa es un producto comercial. El Licenciante vende el
+sistema completo y otorga Licencias comerciales a personas o
+empresas que deseen utilizar el Programa o su Funcionalidad con
+fines comerciales.
+
+5.2. Toda Licencia comercial se otorgará mediante acuerdo escrito
+independiente entre el Licenciatario y el Licenciante, y será
+oneroso. Para obtenerla, debe contactarse al Licenciante.
+
+5.3. Ninguna disposición de este documento limita el derecho del
+Licenciante a celebrar acuerdos particulares con condiciones
+distintas.
+
+
+6. PROPIEDAD INTELECTUAL
+
+6.1. El Programa es propiedad exclusiva del Licenciante y se
+encuentra protegido por las leyes de propiedad intelectual y
+derechos de autor de la República del Perú y de los tratados
+internacionales aplicables.
+
+6.2. El Licenciatario no adquiere, por virtud de esta licencia,
+ningún derecho de propiedad sobre el Programa, su logotipo, su
+marca o sus materiales, salvo los derechos de uso expresamente
+concedidos en la cláusula 3.
+
+
+7. AUSENCIA DE GARANTIA
+
+EL PROGRAMA SE PROPORCIONA "TAL CUAL", SIN GARANTIAS DE NINGUN TIPO,
+EXPRESAS O IMPLICITAS, INCLUIDAS, ENTRE OTRAS, LAS GARANTIAS DE
+COMERCIABILIDAD, ADECUACION A UN FIN PARTICULAR Y NO VIOLACION. EL
+LICENCIATARIO ASUME TODOS LOS RIESGOS DERIVADOS DE SU USO O DE LA
+INDISPONIBILIDAD DEL PROGRAMA.
+
+
+8. LIMITACION DE RESPONSABILIDAD
+
+EN NINGUN CASO EL LICENCIANTE SERA RESPONSABLE POR DANOS DIRECTOS,
+INDIRECTOS, INCIDENTALES, ESPECIALES O CONSECUENTES, NI POR PERDIDA
+DE BENEFICIOS, DATOS O USO, AUN CUANDO SE LE HAYA ADVERTIDO DE LA
+POSIBILIDAD DE TALES DANOS.
+
+
+9. VIGENCIA Y TERMINACION
+
+9.1. Esta licencia entra en vigor desde el acceso del Licenciatario
+al Programa y tiene vigencia permanente.
+
+9.2. Cualquier incumplimiento de la cláusula 4 dará lugar a la
+terminación inmediata de esta licencia, sin perjuicio de las demás
+acciones legales a que haya lugar.
+
+9.3. Al terminar la licencia, el Licenciatario deberá cesar todo uso
+del Programa y destruir o eliminar todas sus copias.
+
+
+10. LEGISLACION APLICABLE
+
+10.1. Esta licencia se regirá por la legislación del país en el que
+el Licenciante tenga su domicilio fiscal. Las controversias
+relacionadas con su interpretación o cumplimiento se someterán a la
+jurisdicción de los tribunales competentes de dicho país.
+
+
+11. DISPOSICIONES FINALES
+
+11.1. Si alguna cláusula de esta licencia fuera declarada nula o
+inaplicable, las restantes permanecerán en plena vigencia.
+
+11.2. El silencio del Licenciante ante un incumplimiento no
+constituirá renuncia a sus derechos.
+
+11.3. Este documento constituye el acuerdo íntegro entre las partes
+respecto del Programa, y solamente podrá modificarse por escrito.
