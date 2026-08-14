@@ -47,6 +47,10 @@ export default function EditorPlano() {
   }
 
   return (
-    <DisenoProyecto proyecto={proyecto} onActualizarProyecto={actualizarProyectoEnServidor} />
+    <DisenoProyecto
+      proyecto={proyecto}
+      onActualizarProyecto={actualizarProyectoEnServidor}
+      modoInicial="vista"
+    />
   );
 }

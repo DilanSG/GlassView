@@ -210,10 +210,6 @@
     font-size: 0.88rem;
   }
 
-  .lista-proyectos {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  }
-
   .editor-distribucion {
     flex-direction: column;
   }

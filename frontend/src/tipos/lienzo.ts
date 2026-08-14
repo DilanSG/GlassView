@@ -9,6 +9,10 @@ export type InteraccionMover = {
   y0: number;
   desplazamientoX: number;
   desplazamientoY: number;
+  /** Posiciones originales de cada pieza del gesto: el arrastre siempre
+   *  se calcula respecto a ellas (1:1 con el cursor, sin arrastre
+   *  compuesto aunque React aún no haya commiteado el estado anterior). */
+  origenPiezas: Record<string, { x: number; y: number }>;
 };
 
 export type InteraccionRedimensionar = {
@@ -22,6 +26,9 @@ export type InteraccionRedimensionar = {
 };
 
 export type Interaccion = InteraccionMover | InteraccionRedimensionar;
+
+/** Estado del guardado en el servidor, visible dentro del lienzo. */
+export type EstadoGuardado = 'sincronizado' | 'conCambios' | 'guardando' | 'error';
 
 export interface RectanguloNuevo {
   x: number;

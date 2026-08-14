@@ -4,6 +4,9 @@ export const PX_POR_CM = 10;
 /** Tamaño (px) de las asas de las esquinas al redimensionar una pieza. */
 export const TAMANO_ASA = 10;
 
+/** Mínimo en pantalla (px) que debe ocupar una pieza para poder pulsarla. */
+export const MINIMO_SELECCION_PANTALLA = 14;
+
 export const ZOOM_MIN = 0.2;
 export const ZOOM_MAX = 3;
 

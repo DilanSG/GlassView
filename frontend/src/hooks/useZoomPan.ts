@@ -62,18 +62,20 @@ export function useZoomPan(): UseZoomPanResultado {
   function aplicarZoom(factor: number): void {
     const etapa = etapaRef.current;
     if (!etapa) return;
-    const centroMundo = {
-      x: (etapa.width() / 2 - vista.x) / vista.zoom,
-      y: (etapa.height() / 2 - vista.y) / vista.zoom,
-    };
-    const siguiente = Math.min(
-      ZOOM_MAX,
-      Math.max(ZOOM_MIN, vista.zoom * factor),
-    );
-    setVista({
-      zoom: siguiente,
-      x: vista.x - centroMundo.x * (siguiente - vista.zoom),
-      y: vista.y - centroMundo.y * (siguiente - vista.zoom),
+    setVista((actual) => {
+      const centroMundo = {
+        x: (etapa.width() / 2 - actual.x) / actual.zoom,
+        y: (etapa.height() / 2 - actual.y) / actual.zoom,
+      };
+      const siguiente = Math.min(
+        ZOOM_MAX,
+        Math.max(ZOOM_MIN, actual.zoom * factor),
+      );
+      return {
+        zoom: siguiente,
+        x: actual.x - centroMundo.x * (siguiente - actual.zoom),
+        y: actual.y - centroMundo.y * (siguiente - actual.zoom),
+      };
     });
   }
 
@@ -84,17 +86,20 @@ export function useZoomPan(): UseZoomPanResultado {
     if (!etapa) return;
     const puntoPantalla = etapa.getRelativePointerPosition();
     if (!puntoPantalla) return;
-    const puntoMundo = {
-      x: (puntoPantalla.x - vista.x) / vista.zoom,
-      y: (puntoPantalla.y - vista.y) / vista.zoom,
-    };
-    const anterior = vista.zoom;
-    const factor = evento.evt.deltaY < 0 ? 1.1 : 1 / 1.1;
-    const siguiente = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, anterior * factor));
-
-    const x = vista.x - (puntoMundo.x * (siguiente - anterior));
-    const y = vista.y - (puntoMundo.y * (siguiente - anterior));
-    setVista({ zoom: siguiente, x, y });
+    setVista((actual) => {
+      const puntoMundo = {
+        x: (puntoPantalla.x - actual.x) / actual.zoom,
+        y: (puntoPantalla.y - actual.y) / actual.zoom,
+      };
+      const anterior = actual.zoom;
+      const factor = evento.evt.deltaY < 0 ? 1.1 : 1 / 1.1;
+      const siguiente = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, anterior * factor));
+      return {
+        zoom: siguiente,
+        x: actual.x - puntoMundo.x * (siguiente - anterior),
+        y: actual.y - puntoMundo.y * (siguiente - anterior),
+      };
+    });
   }
 
   /** Comienza un arrastre de la vista (herramienta «mano»). */

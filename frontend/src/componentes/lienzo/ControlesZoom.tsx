@@ -2,7 +2,6 @@ export interface ControlesZoomProps {
   aplicarZoom: (factor: number) => void;
   enPantallaCompleta: boolean;
   onAbrirPantallaCompleta?: () => void;
-  onExportarPdf: () => void;
 }
 
 const FICHA_ZOOM = {
@@ -21,12 +20,11 @@ const FICHA_PDF = {
   strokeLinejoin: 'round',
 } as const;
 
-/** Botones flotantes del lienzo: acercar, alejar, pantalla completa y PDF. */
+/** Botones flotantes del lienzo: acercar, alejar y pantalla completa. */
 export default function ControlesZoom({
   aplicarZoom,
   enPantallaCompleta,
   onAbrirPantallaCompleta,
-  onExportarPdf,
 }: ControlesZoomProps): JSX.Element {
   return (
     <div className="controles-lienzo">
@@ -75,20 +73,6 @@ export default function ControlesZoom({
           </span>
         </button>
       )}
-      <button
-        type="button"
-        className="boton-zoom"
-        onClick={onExportarPdf}
-        title="Descargar plano en PDF"
-      >
-        <span className="icono-herramienta">
-          <svg viewBox="0 0 24 24" width="18" height="18" {...FICHA_PDF}>
-            <path d="M12 3v12" />
-            <path d="M7 10l5 5 5-5" />
-            <path d="M4 21h16" />
-          </svg>
-        </span>
-      </button>
     </div>
   );
 }

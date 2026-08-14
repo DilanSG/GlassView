@@ -2,20 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Group, Layer, Stage } from 'react-konva';
 import type Konva from 'konva';
 import { useZoomPan } from '../hooks/useZoomPan';
-import { exportarPlanoPdf as exportarPlanoPdfDesdeModulo } from '../pdf/exportarPlanoPdf';
 import type { ModeloVentaneria, PerfilCategoria, PerfilVentaneria, PiezaPlano } from '../tipos';
 import type { HerramientaCad } from '../constantes';
-import type { Interaccion, RectanguloNuevo } from '../tipos/lienzo';
-import { PX_POR_CM } from '../constantes';
+import type { EstadoGuardado, Interaccion, InteraccionMover, RectanguloNuevo } from '../tipos/lienzo';
+import { MINIMO_SELECCION_PANTALLA, PX_POR_CM, TAMANO_ASA } from '../constantes';
 import { obtenerColorVar } from '../utils/colores';
-import { redondearAPx } from '../utils/geometria';
+import { redondearAPx, redondearCm } from '../utils/geometria';
 import { categoriaDeHerramienta } from '../tipos/lienzo';
 import { useRejilla } from '../hooks/useRejilla';
 import BarraHerramientas from '../componentes/lienzo/BarraHerramientas';
 import ControlesZoom from '../componentes/lienzo/ControlesZoom';
 import RejillaKonva from '../componentes/lienzo/RejillaKonva';
 import PiezasKonva from '../componentes/lienzo/PiezasKonva';
-import AsasSeleccion from '../componentes/lienzo/AsasSeleccion';
+import AsasSeleccion, { ESQUINAS_ASAS } from '../componentes/lienzo/AsasSeleccion';
 import CotasKonva from '../componentes/lienzo/CotasKonva';
 import MedidorPieza from '../componentes/lienzo/MedidorPieza';
 import AyudaLienzo from '../componentes/lienzo/AyudaLienzo';
@@ -28,7 +27,10 @@ interface LienzoPlanoProps {
   perfiles: PerfilVentaneria[];
   piezaSeleccionadaId: string | null;
   onSeleccionarPieza: (id: string | null) => void;
+  /** Actualiza las piezas en el editor al instante (sin guardar). */
   onCambiarPiezas: (piezas: PiezaPlano[]) => void;
+  /** Pide guardar el estado actual en el servidor (fin de gesto, etc.). */
+  onGuardarCambios: () => void;
   onPiezaDibujada: (pieza: PiezaPlano) => Promise<void>;
   onPresetDibujado: (
     modeloId: string,
@@ -41,9 +43,21 @@ interface LienzoPlanoProps {
   onAbrirPantallaCompleta?: () => void;
   /** true cuando esta instancia ya se muestra a pantalla completa. */
   enPantallaCompleta?: boolean;
-  /** Nombre del proyecto, se usa como título y nombre de archivo del PDF. */
-  nombrePlano?: string;
+  /** Modo de solo vista: sin herramientas ni paneles, únicamente se puede
+   *  desplazar el plano (y hacer zoom con la rueda) para inspeccionarlo. */
+  modoVista?: boolean;
+  /** Estado del guardado en el servidor, para el botón dentro del lienzo. */
+  estadoGuardado?: EstadoGuardado;
+  /** Pide guardar los cambios (lo usa el botón de estado del lienzo). */
+  onGuardar?: () => void;
 }
+
+const TEXTO_ESTADO_GUARDADO: Record<EstadoGuardado, string> = {
+  sincronizado: 'Guardado',
+  conCambios: 'Guardar',
+  guardando: 'Guardando…',
+  error: 'Error al guardar',
+};
 
 export default function LienzoPlano({
   piezas,
@@ -52,11 +66,14 @@ export default function LienzoPlano({
   piezaSeleccionadaId,
   onSeleccionarPieza,
   onCambiarPiezas,
+  onGuardarCambios,
   onPiezaDibujada,
   onPresetDibujado,
   onAbrirPantallaCompleta,
   enPantallaCompleta = false,
-  nombrePlano = 'plano',
+  modoVista = false,
+  estadoGuardado,
+  onGuardar,
 }: LienzoPlanoProps) {
   const [herramienta, setHerramienta] = useState<string>('seleccion');
   const [barraExpandida, setBarraExpandida] = useState(false);
@@ -109,6 +126,13 @@ export default function LienzoPlano({
   const piezaSeleccionada = piezas.find((p) => p.id === piezaSeleccionadaId) ?? null;
 
   useEffect(() => {
+    // En modo de solo vista la única herramienta disponible es la mano.
+    if (modoVista) {
+      setHerramienta('mano');
+    }
+  }, [modoVista]);
+
+  useEffect(() => {
     const idsValidos = new Set(piezas.map((p) => p.id));
     setIdsSeleccionadas((anterior) => anterior.filter((id) => idsValidos.has(id)));
   }, [piezas]);
@@ -128,6 +152,7 @@ export default function LienzoPlano({
 
   useEffect(() => {
     function manejarTecla(evento: KeyboardEvent): void {
+      if (modoVista) return;
       if (evento.key === 'Delete' || evento.key === 'Backspace') {
         const ids = new Set<string>([...idsSeleccionadas]);
         if (piezaSeleccionadaId) ids.add(piezaSeleccionadaId);
@@ -136,6 +161,7 @@ export default function LienzoPlano({
           onCambiarPiezas(piezas.filter((p) => !ids.has(p.id)));
           onSeleccionarPieza(null);
           setIdsSeleccionadas([]);
+          onGuardarCambios();
         }
       }
     }
@@ -148,7 +174,117 @@ export default function LienzoPlano({
     return mundoRef.current?.getRelativePointerPosition() ?? null;
   }
 
-  function alPresionarRaton(): void {
+  interface ObjetivoPlano {
+    idPieza: string;
+    esquina?: string;
+    abrirMedidor?: boolean;
+  }
+
+  /**
+   * Detección manual y determinista del objetivo bajo el cursor, fiable a
+   * cualquier zoom: primero las asas y el medidor de la pieza seleccionada,
+   * luego las piezas (la última dibujada encima gana), con una caja mínima
+   * constante en pantalla para poder pulsar piezas finas.
+   */
+  function detectarObjetivo(punto: { x: number; y: number }): ObjetivoPlano | null {
+    if (herramienta === 'seleccion' && piezaSeleccionada && idsSeleccionadas.length === 0) {
+      const pieza = piezaSeleccionada;
+      const x = pieza.x * PX_POR_CM;
+      const y = pieza.y * PX_POR_CM;
+      const ancho = pieza.anchoCm * PX_POR_CM;
+      const alto = pieza.altoCm * PX_POR_CM;
+      const tamanoAsa = Math.max(4, TAMANO_ASA / vista.zoom);
+      for (const esquina of ESQUINAS_ASAS) {
+        const ax = x + ancho * esquina.xOff - tamanoAsa / 2;
+        const ay = y + alto * esquina.yOff - tamanoAsa / 2;
+        if (
+          punto.x >= ax &&
+          punto.x <= ax + tamanoAsa &&
+          punto.y >= ay &&
+          punto.y <= ay + tamanoAsa
+        ) {
+          return { idPieza: pieza.id, esquina: esquina.id };
+        }
+      }
+      const radioMedidor = Math.max(12, 16 / vista.zoom);
+      const cx = x + ancho / 2;
+      const cy = y + alto / 2;
+      const dx = punto.x - cx;
+      const dy = punto.y - cy;
+      if (dx * dx + dy * dy <= radioMedidor * radioMedidor) {
+        return { idPieza: pieza.id, abrirMedidor: true };
+      }
+    }
+
+    const minimoSel = MINIMO_SELECCION_PANTALLA / vista.zoom;
+    for (let i = piezas.length - 1; i >= 0; i--) {
+      const pieza = piezas[i];
+      const anchoPx = Math.max(0, pieza.anchoCm) * PX_POR_CM;
+      const altoPx = Math.max(0, pieza.altoCm) * PX_POR_CM;
+      const hitAncho = Math.max(anchoPx, minimoSel);
+      const hitAlto = Math.max(altoPx, minimoSel);
+      const x = pieza.x * PX_POR_CM - (hitAncho - anchoPx) / 2;
+      const y = pieza.y * PX_POR_CM - (hitAlto - altoPx) / 2;
+      if (
+        punto.x >= x &&
+        punto.x <= x + hitAncho &&
+        punto.y >= y &&
+        punto.y <= y + hitAlto
+      ) {
+        return { idPieza: pieza.id };
+      }
+    }
+    return null;
+  }
+
+  /** Captura el puntero para que el arrastre no se corte al salir del lienzo. */
+  function capturarPuntero(evento: Konva.KonvaEventObject<MouseEvent>): void {
+    try {
+      const idPuntero = (evento.evt as PointerEvent).pointerId;
+      etapaRef.current?.getContent().setPointerCapture(idPuntero);
+    } catch {
+      // La captura ya estaba tomada o no es compatible: se ignora.
+    }
+  }
+
+  function liberarPuntero(evento: Konva.KonvaEventObject<MouseEvent>): void {
+    try {
+      const contenido = etapaRef.current?.getContent();
+      const idPuntero = (evento.evt as PointerEvent).pointerId;
+      if (contenido?.hasPointerCapture(idPuntero)) {
+        contenido.releasePointerCapture(idPuntero);
+      }
+    } catch {
+      // Sin captura activa: se ignora.
+    }
+  }
+
+  function crearInteraccionMover(
+    idPieza: string,
+    ids: string[],
+    punto: { x: number; y: number },
+  ): InteraccionMover | null {
+    const pieza = piezas.find((p) => p.id === idPieza);
+    if (!pieza) return null;
+    const origenPiezas: Record<string, { x: number; y: number }> = {};
+    for (const id of ids) {
+      const p = piezas.find((q) => q.id === id);
+      if (p) origenPiezas[id] = { x: p.x, y: p.y };
+    }
+    return {
+      tipo: 'mover',
+      idPieza,
+      ids,
+      x0: pieza.x,
+      y0: pieza.y,
+      desplazamientoX: pieza.x * PX_POR_CM - punto.x,
+      desplazamientoY: pieza.y * PX_POR_CM - punto.y,
+      origenPiezas,
+    };
+  }
+
+  function alPresionarRaton(evento: Konva.KonvaEventObject<MouseEvent>): void {
+    capturarPuntero(evento);
     const punto = puntoRelativo();
     if (!punto) return;
 
@@ -160,35 +296,24 @@ export default function LienzoPlano({
 
     // Al pulsar sobre una pieza, sea cual sea la herramienta activa, se pasa
     // automáticamente a seleccionar (salvo con la mano, que desplaza el plano).
-    const intersecciones = mundoRef.current?.getAllIntersections(punto) ?? [];
-    const objetivo =
-      intersecciones.find((obj) => obj.getAttr('data-esquina')) ??
-      intersecciones.find((obj) => obj.getAttr('data-abrir-medidor')) ??
-      intersecciones.find((obj) => obj.getAttr('data-id-pieza')) ??
-      null;
-    const idPieza = objetivo?.getAttr('data-id-pieza');
+    const objetivo = detectarObjetivo(punto);
+    const idPieza = objetivo?.idPieza ?? null;
     if (herramienta !== 'seleccion' && idPieza) {
       const pieza = piezas.find((p) => p.id === idPieza);
       if (!pieza) return;
       setHerramienta('seleccion');
       setMedidorAbierto(false);
       setIdsSeleccionadas([]);
-      interaccionRef.current = {
-        tipo: 'mover',
-        idPieza,
-        ids: [idPieza],
-        x0: pieza.x,
-        y0: pieza.y,
-        desplazamientoX: pieza.x * PX_POR_CM - punto.x,
-        desplazamientoY: pieza.y * PX_POR_CM - punto.y,
-      };
+      const movimiento = crearInteraccionMover(idPieza, [idPieza], punto);
+      if (!movimiento) return;
+      interaccionRef.current = movimiento;
       onSeleccionarPieza(idPieza);
       return;
     }
 
     if (herramienta === 'seleccion') {
-      const esquina = objetivo?.getAttr('data-esquina');
-      const abrirMedidor = objetivo?.getAttr('data-abrir-medidor') === true;
+      const esquina = objetivo?.esquina;
+      const abrirMedidor = objetivo?.abrirMedidor === true;
 
       if (idPieza && abrirMedidor) {
         onSeleccionarPieza(idPieza);
@@ -215,27 +340,15 @@ export default function LienzoPlano({
         if (!pieza) return;
         if (idsSeleccionadas.length > 0 && idsSeleccionadas.includes(idPieza)) {
           setMedidorAbierto(false);
-          interaccionRef.current = {
-            tipo: 'mover',
-            idPieza,
-            ids: idsSeleccionadas,
-            x0: pieza.x,
-            y0: pieza.y,
-            desplazamientoX: pieza.x * PX_POR_CM - punto.x,
-            desplazamientoY: pieza.y * PX_POR_CM - punto.y,
-          };
+          const movimiento = crearInteraccionMover(idPieza, idsSeleccionadas, punto);
+          if (!movimiento) return;
+          interaccionRef.current = movimiento;
           onSeleccionarPieza(idPieza);
           return;
         }
-        interaccionRef.current = {
-          tipo: 'mover',
-          idPieza,
-          ids: [idPieza],
-          x0: pieza.x,
-          y0: pieza.y,
-          desplazamientoX: pieza.x * PX_POR_CM - punto.x,
-          desplazamientoY: pieza.y * PX_POR_CM - punto.y,
-        };
+        const movimiento = crearInteraccionMover(idPieza, [idPieza], punto);
+        if (!movimiento) return;
+        interaccionRef.current = movimiento;
         onSeleccionarPieza(idPieza);
         setIdsSeleccionadas([]);
         setMedidorAbierto(false);
@@ -283,21 +396,23 @@ export default function LienzoPlano({
     const interaccion = interaccionRef.current;
     if (!interaccion) return;
 
-if (interaccion.tipo === 'mover') {
-      const xPx = redondearAPx(punto.x + interaccion.desplazamientoX, PX_POR_CM);
-      const yPx = redondearAPx(punto.y + interaccion.desplazamientoY, PX_POR_CM);
-      const dx = Math.max(0, xPx) / PX_POR_CM - interaccion.x0;
-      const dy = Math.max(0, yPx) / PX_POR_CM - interaccion.y0;
+    if (interaccion.tipo === 'mover') {
+      // Arrastre exacto 1:1 con el cursor. Cada pieza se posiciona desde su
+      // posición ORIGINAL del gesto + el delta total actual, jamás desde la
+      // posición ya desplazada del prop: si un render queda pendiente, el
+      // delta total no se vuelve a sumar encima (sin arrastre compuesto).
+      const dx = Math.max(0, punto.x + interaccion.desplazamientoX) / PX_POR_CM - interaccion.x0;
+      const dy = Math.max(0, punto.y + interaccion.desplazamientoY) / PX_POR_CM - interaccion.y0;
       onCambiarPiezas(
-        piezas.map((p) =>
-          interaccion.ids.includes(p.id)
-            ? {
-                ...p,
-                x: Math.max(0, Math.round((p.x + dx) * 10) / 10),
-                y: Math.max(0, Math.round((p.y + dy) * 10) / 10),
-              }
-            : p,
-        ),
+        piezas.map((p) => {
+          if (!interaccion.ids.includes(p.id)) return p;
+          const origen = interaccion.origenPiezas[p.id] ?? { x: p.x, y: p.y };
+          return {
+            ...p,
+            x: redondearCm(Math.max(0, origen.x + dx)),
+            y: redondearCm(Math.max(0, origen.y + dy)),
+          };
+        }),
       );
       return;
     }
@@ -355,8 +470,11 @@ if (interaccion.tipo === 'mover') {
     );
   }
 
-  async function alSoltarRaton(): Promise<void> {
+  async function alSoltarRaton(evento: Konva.KonvaEventObject<MouseEvent>): Promise<void> {
+    liberarPuntero(evento);
     if (terminarPan()) return;
+
+    const habiaInteraccion = interaccionRef.current !== null;
 
     if (herramienta.startsWith('preset-')) {
       const punto = clicPresetRef.current;
@@ -447,6 +565,9 @@ if (interaccion.tipo === 'mover') {
     }
 
     interaccionRef.current = null;
+    if (habiaInteraccion) {
+      onGuardarCambios();
+    }
   }
 
   async function confirmarPieza(ref: string, descripcion: string): Promise<void> {
@@ -478,33 +599,31 @@ if (interaccion.tipo === 'mover') {
   }
 
 
-  /** Genera y descarga un PDF del plano con cotas en los cuatro lados. */
-  function exportarPlanoPdf(): void {
-    exportarPlanoPdfDesdeModulo(piezas, piezaSeleccionada, nombrePlano);
-  }
-
   return (
     <div className="lienzo-contenedor">
-      <BarraHerramientas
-        herramienta={herramienta}
-        barraExpandida={barraExpandida}
-        presetsAbierto={presetsAbierto}
-        modelos={modelos}
-        onCambiarHerramienta={setHerramienta}
-        onAlternarBarra={() => setBarraExpandida((antes) => !antes)}
-        onAlternarPresets={() => {
-          setPresetsAbierto((antes) => !antes);
-          setBarraExpandida(true);
-        }}
-      />
+      {!modoVista && (
+        <BarraHerramientas
+          herramienta={herramienta}
+          barraExpandida={barraExpandida}
+          presetsAbierto={presetsAbierto}
+          modelos={modelos}
+          onCambiarHerramienta={setHerramienta}
+          onAlternarBarra={() => setBarraExpandida((antes) => !antes)}
+          onAlternarPresets={() => {
+            setPresetsAbierto((antes) => !antes);
+            setBarraExpandida(true);
+          }}
+        />
+      )}
 
       <div className="lienzo-scroll" ref={contenedorRef}>
-        <ControlesZoom
-          aplicarZoom={aplicarZoom}
-          enPantallaCompleta={enPantallaCompleta}
-          onAbrirPantallaCompleta={onAbrirPantallaCompleta}
-          onExportarPdf={exportarPlanoPdf}
-        />
+        {!modoVista && (
+          <ControlesZoom
+            aplicarZoom={aplicarZoom}
+            enPantallaCompleta={enPantallaCompleta}
+            onAbrirPantallaCompleta={onAbrirPantallaCompleta}
+          />
+        )}
         <Stage
           ref={etapaRef}
           width={tamanoVista.ancho}
@@ -547,6 +666,7 @@ if (interaccion.tipo === 'mover') {
               {piezaSeleccionada && herramienta === 'seleccion' && idsSeleccionadas.length === 0 && (
                 <AsasSeleccion
                   pieza={piezaSeleccionada}
+                  zoom={vista.zoom}
                   colorAcento={colorAcento}
                   colorBorde={colorBorde}
                   colorTexto={colorTexto}
@@ -569,17 +689,32 @@ if (interaccion.tipo === 'mover') {
             pieza={piezaSeleccionada}
             vista={vista}
             onSeleccionarPieza={onSeleccionarPieza}
-            onMedir={(cambios) =>
+            onMedir={(cambios) => {
               onCambiarPiezas(
                 piezas.map((p) => (p.id === piezaSeleccionada.id ? { ...p, ...cambios } : p)),
-              )
-            }
+              );
+              onGuardarCambios();
+            }}
             onCerrar={() => setMedidorAbierto(false)}
           />
         )}
+
+        {!modoVista && estadoGuardado && onGuardar && (
+          <div className="guardado-overlay">
+            <button
+              type="button"
+              className={`boton-guardar estado-guardado estado-${estadoGuardado}`}
+              disabled={estadoGuardado === 'sincronizado' || estadoGuardado === 'guardando'}
+              onClick={onGuardar}
+              title="Guardar los cambios en el servidor"
+            >
+              {TEXTO_ESTADO_GUARDADO[estadoGuardado]}
+            </button>
+          </div>
+        )}
       </div>
 
-      <AyudaLienzo />
+      {!modoVista && <AyudaLienzo />}
 
       {piezaPendiente && (
         <SelectorRef

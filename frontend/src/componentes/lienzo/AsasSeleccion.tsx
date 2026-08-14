@@ -5,12 +5,13 @@ import { radioSeguro } from '../../utils/geometria';
 
 export interface AsasSeleccionProps {
   pieza: PiezaPlano;
+  zoom: number;
   colorAcento: string;
   colorBorde: string;
   colorTexto: string;
 }
 
-const ESQUINAS = [
+export const ESQUINAS_ASAS = [
   { id: 'sup-izq', xOff: 0, yOff: 0 },
   { id: 'sup', xOff: 0.5, yOff: 0 },
   { id: 'sup-der', xOff: 1, yOff: 0 },
@@ -24,6 +25,7 @@ const ESQUINAS = [
 /** Asas de redimensionado en el borde de la pieza y asa central (medidor). */
 export default function AsasSeleccion({
   pieza,
+  zoom,
   colorAcento,
   colorBorde,
   colorTexto,
@@ -32,22 +34,23 @@ export default function AsasSeleccion({
   const y = pieza.y * PX_POR_CM;
   const ancho = pieza.anchoCm * PX_POR_CM;
   const alto = pieza.altoCm * PX_POR_CM;
+  /** Tamaño del asa en coordenadas de mundo: constante en pantalla (10 px). */
+  const tamanoAsa = Math.max(4, TAMANO_ASA / zoom);
 
   return (
     <>
-      {ESQUINAS.map((esquina) => (
+      {ESQUINAS_ASAS.map((esquina) => (
         <Rect
           key={`asa-${esquina.id}`}
-          x={x + ancho * esquina.xOff - TAMANO_ASA / 2}
-          y={y + alto * esquina.yOff - TAMANO_ASA / 2}
-          width={TAMANO_ASA}
-          height={TAMANO_ASA}
+          x={x + ancho * esquina.xOff - tamanoAsa / 2}
+          y={y + alto * esquina.yOff - tamanoAsa / 2}
+          width={tamanoAsa}
+          height={tamanoAsa}
           fill={colorBorde}
           stroke={colorTexto}
           strokeWidth={1}
-          cornerRadius={radioSeguro(TAMANO_ASA, TAMANO_ASA, 2)}
-          data-id-pieza={pieza.id}
-          data-esquina={esquina.id}
+          cornerRadius={radioSeguro(tamanoAsa, tamanoAsa, 2)}
+          listening={false}
         />
       ))}
       <Circle
@@ -58,8 +61,7 @@ export default function AsasSeleccion({
         fill={`${colorAcento}2e`}
         stroke={colorAcento}
         strokeWidth={1.5}
-        data-id-pieza={pieza.id}
-        data-abrir-medidor
+        listening={false}
       />
       <Line
         listening={false}

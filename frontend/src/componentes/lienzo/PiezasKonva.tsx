@@ -19,6 +19,8 @@ export interface PiezasKonvaProps {
  * Capa principal del lienzo: piezas como rectángulos (o círculos para
  * elementos puntuales), el marco punteado de la pieza seleccionada y el
  * rectángulo de vista previa al arrastrar (dibujar o selección múltiple).
+ * Todo es puramente visual (listening=false): la detección de clic/arrastre
+ * se hace manualmente en LienzoPlano, fiable a cualquier zoom.
  */
 export default function PiezasKonva({
   piezas,
@@ -69,8 +71,7 @@ export default function PiezasKonva({
               fill={seleccionada ? colorAcento : colorRelleno}
               stroke={colorBorde}
               strokeWidth={1.5}
-              data-id-pieza={pieza.id}
-              hitStrokeWidth={10}
+              listening={false}
             />
           );
         }
@@ -87,7 +88,7 @@ export default function PiezasKonva({
             stroke={seleccionada ? colorAcento : colorBorde}
             strokeWidth={seleccionada ? 2 : 1}
             cornerRadius={radioSeguro(anchoPx, altoPx, 2)}
-            data-id-pieza={pieza.id}
+            listening={false}
           />
         );
       })}
@@ -103,6 +104,7 @@ export default function PiezasKonva({
           strokeWidth={1.5}
           dash={[6, 4]}
           cornerRadius={radioSeguro(Math.max(0, rectPreview.ancho), Math.max(0, rectPreview.alto), 2)}
+          listening={false}
         />
       )}
     </>
