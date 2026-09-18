@@ -28,7 +28,7 @@ export default function Acceso() {
   return (
     <div className="pantalla-acceso">
       <form className="tarjeta-acceso" onSubmit={manejarEnvio}>
-        <h1>GlassView2.0</h1>
+        <h1>GlassView</h1>
         <p>Planos de instalaciones de cristalería</p>
 
         <label htmlFor="pin">PIN de acceso</label>

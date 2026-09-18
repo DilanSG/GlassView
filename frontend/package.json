@@ -1,9 +1,9 @@
 {
   "name": "glassview-frontend",
   "version": "0.1.0",
-  "description": "Interfaz de GlassView2.0: planos de instalaciones de cristalería",
+  "description": "Interfaz de GlassView: planos de instalaciones de cristalería",
   "author": "IntoCode",
-  "contributors": ["Dilan Acuña", "Axl Anzola"],
+  "contributors": ["Axl Anzola", "Dilan Acuña"],
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",

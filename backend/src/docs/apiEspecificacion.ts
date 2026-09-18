@@ -1,5 +1,5 @@
 /**
- * Especificación OpenAPI 3.0 de la API de GlassView2.0.
+ * Especificación OpenAPI 3.0 de la API de GlassView.
  *
  * Se sirve en GET /api/docs mediante swagger-ui-express.
  * Todas las rutas (excepto /estado y /auth/verificar-pin) exigen el token
@@ -17,14 +17,14 @@ const autenticacion = {
 export const especificacionApi = {
   openapi: '3.0.0',
   info: {
-    title: 'GlassView2.0 API',
+    title: 'GlassView API',
     version: '0.1.0',
     description:
       'API de planos de instalaciones de cristalería: catálogo de modelos de ventanería, despieces y CRUD de proyectos.\n\n' +
       'Todas las respuestas usan el mismo contenedor `{ exito, datos, mensaje }`. ' +
       'Las rutas protegidas requieren la cabecera `x-token-acceso` con el token obtenido al verificar el PIN.',
   },
-  servers: [{ url: '/api', description: 'Servidor GlassView2.0' }],
+  servers: [{ url: '/api', description: 'Servidor GlassView' }],
   tags: [
     { name: 'Estado', description: 'Salud del servidor' },
     { name: 'Autenticación', description: 'Acceso por PIN compartido' },

@@ -140,11 +140,6 @@
   white-space: nowrap;
 }
 
-.marca-navegacion span {
-  color: var(--text-tertiary);
-  font-weight: 500;
-}
-
 .navegacion-enlaces {
   display: flex;
   align-items: center;

@@ -5,7 +5,7 @@ export default function BarraNavegacion() {
   return (
     <nav className="barra-navegacion">
       <NavLink to="/proyectos" className="marca-navegacion">
-        GlassView<span>2.0</span>
+        GlassView
       </NavLink>
 
       <div className="navegacion-enlaces">

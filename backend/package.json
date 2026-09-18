@@ -1,9 +1,9 @@
 {
   "name": "glassview-backend",
   "version": "0.1.0",
-  "description": "API de GlassView2.0: planos de instalaciones de cristalería",
+  "description": "API de GlassView: planos de instalaciones de cristalería",
   "author": "IntoCode",
-  "contributors": ["Dilan Acuña", "Axl Anzola"],
+  "contributors": ["Axl Anzola", "Dilan Acuña"],
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "main": "dist/index.js",

@@ -9,6 +9,7 @@ import type {
 
 const CLAVE_TOKEN = 'glassview-token-acceso';
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+const RUTA_ACCESO = '/acceso';
 
 interface RespuestaApi<T> {
   exito: boolean;
@@ -29,7 +30,32 @@ export function eliminarToken(): void {
 }
 
 export function haySesionActiva(): boolean {
-  return obtenerToken() !== null;
+  return tokenVigente(obtenerToken());
+}
+
+/**
+ * Comprueba la estructura y la fecha de expiración del token en el cliente.
+ * La firma solo la puede validar el backend; si el token fue alterado o
+ * revocado, la primera petición protegida responderá 401.
+ */
+function tokenVigente(token: string | null): boolean {
+  if (!token) {
+    return false;
+  }
+  const partes = token.split('.');
+  if (partes.length !== 3) {
+    return false;
+  }
+  const expiracion = Number(partes[1]);
+  return Number.isFinite(expiracion) && Date.now() <= expiracion;
+}
+
+/** Borra la sesión y devuelve al usuario a la pantalla del PIN. */
+function manejarSesionExpirada(): void {
+  eliminarToken();
+  if (window.location.pathname !== RUTA_ACCESO) {
+    window.location.replace(RUTA_ACCESO);
+  }
 }
 
 export class ErrorApi extends Error {
@@ -57,6 +83,10 @@ async function peticion<T>(ruta: string, opciones: RequestInit = {}): Promise<Re
     ...opciones,
     headers: cabeceras,
   });
+
+  if (respuesta.status === 401 && ruta !== '/auth/verificar-pin') {
+    manejarSesionExpirada();
+  }
 
   const texto = await respuesta.text();
   let cuerpo: RespuestaApi<T> | null = null;
