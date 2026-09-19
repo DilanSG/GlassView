@@ -2,8 +2,8 @@
  * Especificación OpenAPI 3.0 de la API de GlassView.
  *
  * Se sirve en GET /api/docs mediante swagger-ui-express.
- * Todas las rutas (excepto /estado y /auth/verificar-pin) exigen el token
- * de acceso en la cabecera `x-token-acceso`.
+ * Todas las rutas (excepto /estado, /auth/registro, /auth/login y
+ * /facturacion/precio) exigen el token de sesión en `x-token-acceso`.
  */
 
 const autenticacion = {
@@ -11,7 +11,7 @@ const autenticacion = {
   in: 'header',
   name: 'x-token-acceso',
   description:
-    'Token firmado con HMAC que devuelve POST /auth/verificar-pin al introducir el PIN correcto. Caduca a los 30 días.',
+    'Token firmado con HMAC que devuelven POST /auth/registro y POST /auth/login. Caduca a los 30 días.',
 } as const;
 
 export const especificacionApi = {
@@ -20,16 +20,19 @@ export const especificacionApi = {
     title: 'GlassView API',
     version: '0.1.0',
     description:
-      'API de planos de instalaciones de cristalería: catálogo de modelos de ventanería, despieces y CRUD de proyectos.\n\n' +
+      'API de planos de instalaciones de cristalería: cuentas de usuario, suscripción, catálogo de modelos de ventanería, despieces y CRUD de proyectos.\n\n' +
       'Todas las respuestas usan el mismo contenedor `{ exito, datos, mensaje }`. ' +
-      'Las rutas protegidas requieren la cabecera `x-token-acceso` con el token obtenido al verificar el PIN.',
+      'Las rutas protegidas requieren la cabecera `x-token-acceso` con el token de sesión. ' +
+      'Las funciones de dibujo devuelven 402 cuando la prueba terminó y no hay suscripción activa.',
   },
   servers: [{ url: '/api', description: 'Servidor GlassView' }],
   tags: [
     { name: 'Estado', description: 'Salud del servidor' },
-    { name: 'Autenticación', description: 'Acceso por PIN compartido' },
+    { name: 'Autenticación', description: 'Registro, sesión y perfil del usuario' },
+    { name: 'Facturación', description: 'Precio localizado y suscripción mensual' },
+    { name: 'Usuarios (admin)', description: 'Gestión de cuentas por el administrador' },
     { name: 'Catálogo de ventanería', description: 'Modelos, perfiles, despieces y plantillas (presets)' },
-    { name: 'Proyectos', description: 'CRUD de proyectos de instalación' },
+    { name: 'Proyectos', description: 'CRUD de proyectos privados de cada usuario' },
   ],
   paths: {
     '/estado': {
@@ -55,10 +58,12 @@ export const especificacionApi = {
         },
       },
     },
-    '/auth/verificar-pin': {
+    '/auth/registro': {
       post: {
         tags: ['Autenticación'],
-        summary: 'Verifica el PIN compartido y devuelve el token de acceso',
+        summary: 'Crea una cuenta y comienza la prueba gratuita',
+        description:
+          'Registra al usuario con nombre, correo y contraseña. La prueba gratuita dura los días configurados en `TRIAL_DAYS` (10 por defecto).',
         security: [],
         requestBody: {
           required: true,
@@ -66,9 +71,54 @@ export const especificacionApi = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['pin'],
+                required: ['nombre', 'email', 'contrasena'],
                 properties: {
-                  pin: { type: 'string', description: 'PIN compartido (ACCESS_CODE)', example: '1234' },
+                  nombre: { type: 'string', example: 'Ana Pérez' },
+                  email: { type: 'string', format: 'email', example: 'ana@ejemplo.com' },
+                  contrasena: { type: 'string', minLength: 6, example: 'clave-segura' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Cuenta creada: devuelve el token y el usuario',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+                example: {
+                  exito: true,
+                  datos: {
+                    token: '65f0a1b2c3d4e5f6a7b8c9d0.1780000000000.6f2a...',
+                    usuario: { _id: '65f0a1b2c3d4e5f6a7b8c9d0', nombre: 'Ana Pérez', email: 'ana@ejemplo.com', rol: 'usuario' },
+                  },
+                  mensaje: 'Cuenta creada. Tienes 10 días de prueba gratuita.',
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '409': { $ref: '#/components/responses/Conflicto' },
+          '500': { $ref: '#/components/responses/ErrorServidor' },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        tags: ['Autenticación'],
+        summary: 'Inicia sesión con correo y contraseña',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'contrasena'],
+                properties: {
+                  email: { type: 'string', format: 'email', example: 'ana@ejemplo.com' },
+                  contrasena: { type: 'string', example: 'clave-segura' },
                 },
               },
             },
@@ -76,21 +126,300 @@ export const especificacionApi = {
         },
         responses: {
           '200': {
-            description: 'PIN correcto: se devuelve el token firmado',
+            description: 'Sesión iniciada: devuelve el token y el usuario',
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/RespuestaApi',
-                },
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
                 example: {
                   exito: true,
-                  datos: { token: '1234.1780000000000.6f2a...' },
-                  mensaje: 'Acceso concedido.',
+                  datos: { token: '65f0a1b2c3d4e5f6a7b8c9d0.1780000000000.6f2a...', usuario: { _id: '65f0a1b2c3d4e5f6a7b8c9d0', nombre: 'Ana Pérez', rol: 'usuario' } },
+                  mensaje: 'Sesión iniciada.',
                 },
               },
             },
           },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
           '401': { $ref: '#/components/responses/NoAutorizado' },
+          '403': { $ref: '#/components/responses/CuentaBloqueada' },
+        },
+      },
+    },
+    '/auth/perfil': {
+      get: {
+        tags: ['Autenticación'],
+        summary: 'Obtiene el perfil y el estado de acceso del usuario',
+        responses: {
+          '200': {
+            description: 'Perfil cargado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+        },
+      },
+      put: {
+        tags: ['Autenticación'],
+        summary: 'Actualiza el nombre y el correo del usuario',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  nombre: { type: 'string', example: 'Ana Pérez' },
+                  email: { type: 'string', format: 'email', example: 'ana@ejemplo.com' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Perfil actualizado', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '409': { $ref: '#/components/responses/Conflicto' },
+        },
+      },
+    },
+    '/auth/contrasena': {
+      put: {
+        tags: ['Autenticación'],
+        summary: 'Cambia la contraseña comprobando la actual',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['contrasenaActual', 'contrasenaNueva'],
+                properties: {
+                  contrasenaActual: { type: 'string' },
+                  contrasenaNueva: { type: 'string', minLength: 6 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Contraseña actualizada', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+        },
+      },
+    },
+    '/auth/cuenta': {
+      delete: {
+        tags: ['Autenticación'],
+        summary: 'Elimina la cuenta y sus proyectos',
+        responses: {
+          '200': { description: 'Cuenta eliminada', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '500': { $ref: '#/components/responses/ErrorServidor' },
+        },
+      },
+    },
+    '/auth/usuarios': {
+      get: {
+        tags: ['Usuarios (admin)'],
+        summary: 'Lista todas las cuentas',
+        responses: {
+          '200': {
+            description: 'Usuarios cargados',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+                example: { exito: true, datos: [{ _id: '65f0...', nombre: 'Ana Pérez', email: 'ana@ejemplo.com', rol: 'usuario', activo: true }], mensaje: 'Usuarios cargados.' },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '403': { $ref: '#/components/responses/AccesoDenegado' },
+        },
+      },
+      post: {
+        tags: ['Usuarios (admin)'],
+        summary: 'Crea una cuenta manualmente',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['nombre', 'email', 'contrasena'],
+                properties: {
+                  nombre: { type: 'string' },
+                  email: { type: 'string', format: 'email' },
+                  contrasena: { type: 'string', minLength: 6 },
+                  rol: { type: 'string', enum: ['usuario', 'admin'] },
+                  activo: { type: 'boolean' },
+                  pruebaHasta: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Usuario creado', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '403': { $ref: '#/components/responses/AccesoDenegado' },
+          '409': { $ref: '#/components/responses/Conflicto' },
+        },
+      },
+    },
+    '/auth/usuarios/{id}': {
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string' },
+          description: 'Identificador de Mongo del usuario',
+          example: '65f0a1b2c3d4e5f6a7b8c9d0',
+        },
+      ],
+      get: {
+        tags: ['Usuarios (admin)'],
+        summary: 'Obtiene una cuenta por su id',
+        responses: {
+          '200': { description: 'Usuario encontrado', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '403': { $ref: '#/components/responses/AccesoDenegado' },
+          '404': { $ref: '#/components/responses/NoEncontrado' },
+        },
+      },
+      put: {
+        tags: ['Usuarios (admin)'],
+        summary: 'Actualiza rol, estado, prueba, suscripción o datos de la cuenta',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  nombre: { type: 'string' },
+                  email: { type: 'string', format: 'email' },
+                  contrasena: { type: 'string', minLength: 6, description: 'Opcional: restablece la contraseña' },
+                  rol: { type: 'string', enum: ['usuario', 'admin'] },
+                  activo: { type: 'boolean' },
+                  pruebaHasta: { type: 'string', format: 'date-time' },
+                  suscripcion: {
+                    type: 'object',
+                    properties: {
+                      activa: { type: 'boolean' },
+                      fechaInicio: { type: 'string', format: 'date-time' },
+                      fechaFin: { type: 'string', format: 'date-time' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Usuario actualizado', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '403': { $ref: '#/components/responses/AccesoDenegado' },
+          '404': { $ref: '#/components/responses/NoEncontrado' },
+          '409': { $ref: '#/components/responses/Conflicto' },
+        },
+      },
+      delete: {
+        tags: ['Usuarios (admin)'],
+        summary: 'Elimina una cuenta y sus proyectos',
+        responses: {
+          '200': { description: 'Usuario eliminado', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '403': { $ref: '#/components/responses/AccesoDenegado' },
+          '404': { $ref: '#/components/responses/NoEncontrado' },
+        },
+      },
+    },
+    '/facturacion/precio': {
+      get: {
+        tags: ['Facturación'],
+        summary: 'Precio mensual convertido a la moneda del país de compra',
+        description:
+          'Detecta el país por IP, cabeceras geográficas o idioma del navegador; convierte los USD a la moneda local con una API en vivo y respaldo local. Ruta pública: la landing la usa antes de registrarse.',
+        security: [],
+        parameters: [
+          {
+            name: 'pais',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: 'CO' },
+            description: 'Código ISO de dos letras para forzar el país (útil en pruebas).',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Precio localizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+                example: {
+                  exito: true,
+                  datos: { pais: 'CO', paisNombre: 'Colombia', moneda: 'COP', precioUsd: 10, precioLocal: 41000, tasa: 4100, fuente: 'vivo', periodoDias: 30, diasPrueba: 10 },
+                  mensaje: 'Precio cargado.',
+                },
+              },
+            },
+          },
+          '500': { $ref: '#/components/responses/ErrorServidor' },
+        },
+      },
+    },
+    '/facturacion': {
+      get: {
+        tags: ['Facturación'],
+        summary: 'Estado de facturación del usuario autenticado',
+        responses: {
+          '200': { description: 'Facturación cargada', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+        },
+      },
+    },
+    '/facturacion/pagar': {
+      post: {
+        tags: ['Facturación'],
+        summary: 'Simula el pago mensual y activa la suscripción',
+        description:
+          'Punto de integración de la pasarela de pago: hoy genera una referencia simulada, activa 30 días de suscripción y guarda el comprobante con el importe en la moneda local cobrada. Disponible incluso si la prueba terminó.',
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  pais: {
+                    type: 'string',
+                    description: 'Código ISO del país para fijar la moneda del cobro (opcional)',
+                    example: 'CO',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Pago registrado y suscripción activa',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '500': { $ref: '#/components/responses/ErrorServidor' },
         },
       },
     },
@@ -303,8 +632,9 @@ export const especificacionApi = {
     '/proyectos': {
       get: {
         tags: ['Proyectos'],
-        summary: 'Lista todos los proyectos',
-        description: 'Devuelve los proyectos ordenados por fecha de creación descendente.',
+        summary: 'Lista los proyectos del usuario autenticado',
+        description:
+          'Devuelve solo los proyectos del usuario de la sesión, ordenados por fecha de creación descendente. Los proyectos son privados: ningún otro usuario ni el administrador puede verlos.',
         responses: {
           '200': {
             description: 'Proyectos cargados',
@@ -320,6 +650,7 @@ export const especificacionApi = {
             },
           },
           '401': { $ref: '#/components/responses/NoAutorizado' },
+          '402': { $ref: '#/components/responses/PagoRequerido' },
           '500': { $ref: '#/components/responses/ErrorServidor' },
         },
       },
@@ -459,6 +790,43 @@ export const especificacionApi = {
           mensaje: { type: 'string', description: 'Mensaje legible del resultado' },
         },
         required: ['exito', 'datos', 'mensaje'],
+      },
+      Usuario: {
+        type: 'object',
+        description: 'Cuenta de usuario con su prueba gratuita y suscripción (sin datos sensibles).',
+        properties: {
+          _id: { type: 'string' },
+          nombre: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          rol: { type: 'string', enum: ['usuario', 'admin'] },
+          activo: { type: 'boolean' },
+          fechaRegistro: { type: 'string', format: 'date-time' },
+          pruebaHasta: { type: 'string', format: 'date-time', description: 'Fin de la prueba gratuita de 10 días' },
+          suscripcion: {
+            type: 'object',
+            properties: {
+              activa: { type: 'boolean' },
+              fechaInicio: { type: 'string', format: 'date-time' },
+              fechaFin: { type: 'string', format: 'date-time' },
+              ultimoPago: { type: 'string', format: 'date-time' },
+            },
+          },
+          estado: {
+            type: 'object',
+            description: 'Estado de acceso calculado: enPrueba, suscripcionActiva, permiteAcceso, motivo y días restantes.',
+            properties: {
+              enPrueba: { type: 'boolean' },
+              diasPruebaRestantes: { type: 'number' },
+              pruebaHasta: { type: 'string', format: 'date-time' },
+              suscripcionActiva: { type: 'boolean' },
+              suscripcionHasta: { type: 'string', format: 'date-time', nullable: true },
+              permiteAcceso: { type: 'boolean' },
+              motivo: { type: 'string', enum: ['prueba', 'suscripcion', 'expirado', 'bloqueado'] },
+              precioUsd: { type: 'number' },
+            },
+          },
+        },
+        required: ['_id', 'nombre', 'email', 'rol', 'permiteAcceso'],
       },
       PiezaPlano: {
         type: 'object',
@@ -626,11 +994,47 @@ export const especificacionApi = {
     },
     responses: {
       NoAutorizado: {
-        description: 'Falta el token de acceso o es inválido/expirado.',
+        description: 'Falta el token de sesión o es inválido/expirado.',
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/RespuestaApi' },
-            example: { exito: false, datos: null, mensaje: 'Acceso no autorizado: PIN no válido o sesión expirada.' },
+            example: { exito: false, datos: null, mensaje: 'Sesión no válida o expirada. Inicia sesión de nuevo.', codigo: 'SESION_INVALIDA' },
+          },
+        },
+      },
+      PagoRequerido: {
+        description: 'La prueba gratuita terminó y la suscripción no está activa.',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/RespuestaApi' },
+            example: { exito: false, datos: null, mensaje: 'Tu prueba gratuita terminó. Activa tu suscripción para seguir creando planos.', codigo: 'SUSCRIPCION_REQUERIDA' },
+          },
+        },
+      },
+      CuentaBloqueada: {
+        description: 'La cuenta fue bloqueada por el administrador.',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/RespuestaApi' },
+            example: { exito: false, datos: null, mensaje: 'Tu cuenta está bloqueada. Contacta con soporte de GlassView.', codigo: 'CUENTA_BLOQUEADA' },
+          },
+        },
+      },
+      AccesoDenegado: {
+        description: 'La cuenta no tiene permisos de administrador.',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/RespuestaApi' },
+            example: { exito: false, datos: null, mensaje: 'No tienes permisos de administrador.', codigo: 'PERMISOS_INSUFICIENTES' },
+          },
+        },
+      },
+      Conflicto: {
+        description: 'El recurso ya existe (por ejemplo, un correo registrado).',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/RespuestaApi' },
+            example: { exito: false, datos: null, mensaje: 'Ya existe una cuenta con ese correo.' },
           },
         },
       },

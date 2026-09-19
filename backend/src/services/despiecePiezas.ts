@@ -139,9 +139,10 @@ export function calcularDespiecePiezas(piezas: Pieza[]): DespiecePiezas {
  */
 function grosorModelo(modelo: ModeloVentaneria): number {
   const descripciones = modelo.piezas.map((p) => `${p.ref} ${p.descripcion}`.toLowerCase());
-  if (descripciones.some((d) => /tubo 3\s*x/.test(d) || /3\s*x\s*1/.test(d))) return 7.6;
-  if (descripciones.some((d) => /tubo 1\s*1\/2/.test(d) || /1\s*1\/2/.test(d))) return 3.8;
-  if (descripciones.some((d) => /u 2\s*x\s*1/.test(d) || /2\s*x\s*1/.test(d))) return 5.1;
+  // El grosor lo marca el perfil del marco (U 2×1 en P.B.); si no, el tubo.
+  if (descripciones.some((d) => /u 2\s*x\s*1/.test(d))) return 5.1;
+  if (descripciones.some((d) => /tubo 3\s*x/.test(d))) return 7.6;
+  if (descripciones.some((d) => /tubo 1\s*1\/2/.test(d))) return 3.8;
   return 5;
 }
 
@@ -152,11 +153,44 @@ interface HojaPieza {
   alto: number;
 }
 
+type DireccionMedida = 'ancho' | 'alto' | 'fija';
+type OrientacionPerfil = 'horizontal' | 'vertical';
+
+interface PiezaConBase {
+  pieza: PiezaDespiece;
+  base: DireccionMedida;
+}
+
+/** Centra una pieza de `medida` dentro de `total` (nunca negativo). */
+function centrar(medida: number, total: number): number {
+  return Math.max(0, Math.round(((total - medida) / 2) * 10) / 10);
+}
+
+/** Orientación real de un perfil según su fórmula (ancho/alto) o su nombre. */
+function orientacionDe({ pieza, base }: PiezaConBase): OrientacionPerfil {
+  if (base === 'ancho') return 'horizontal';
+  if (base === 'alto') return 'vertical';
+  return /HORIZONTAL|HOR\b|HOR\./i.test(pieza.descripcion) ? 'horizontal' : 'vertical';
+}
+
+/** Expande las piezas por su cantidad, conservando el orden del catálogo. */
+function expandir(lista: PiezaConBase[]): PiezaDespiece[] {
+  const salida: PiezaDespiece[] = [];
+  for (const { pieza } of lista) {
+    const repeticiones = Math.max(1, Math.round(pieza.cantidad));
+    for (let indice = 0; indice < repeticiones; indice += 1) {
+      salida.push(pieza);
+    }
+  }
+  return salida;
+}
+
 /**
- * Coloca las piezas de una plantilla en el lienzo con una disposición real:
- * marco exterior (cabezal/sillar/jambas), bandas de hoja según el diseño y los
- * vidrios encajados en cada banda. Usa el grosor real del perfil (tubular en
- * pulgadas) y las fórmulas de corte verificadas contra el Excel.
+ * Coloca las piezas de una plantilla en el lienzo respetando la disposición
+ * real del modelo del Excel: el marco exterior usa las medidas de corte y se
+ * centra en el hueco (cabezal/sillar arriba y abajo, jambas a los lados), cada
+ * hoja recibe sus rieles y parales según la dirección de su fórmula, y los
+ * vidrios se encajan dentro de cada hoja.
  */
 export function generarPiezasPreset(
   modeloId: string,
@@ -170,48 +204,32 @@ export function generarPiezasPreset(
   const despiece = calcularDespieceVentaneria(modelo, anchoCm, altoCm);
   const piezas: Pieza[] = [];
   const grosor = grosorModelo(modelo);
+  const anchoUtil = Math.max(0, anchoCm - grosor * 2);
+  const altoUtil = Math.max(0, altoCm - grosor * 2);
   let contador = 0;
-
-  const esAccesorio = (descripcion: string): boolean =>
-    /ANGULO|CHAPETA|BARRA|SOPORTE|MANIJA|SEGURO|TORNILL|REMACH|CHAZO|PISAVIDRIO|ADAPTADOR/i.test(
-      descripcion,
-    );
-
-  const iterarPiezas = <T>(
-    lista: PiezaDespiece[],
-    fn: (pieza: PiezaDespiece, indice: number) => T,
-  ): T[] => {
-    const salida: T[] = [];
-    let indice = 0;
-    for (const pieza of lista) {
-      for (let i = 0; i < pieza.cantidad; i += 1) {
-        salida.push(fn(pieza, indice));
-        indice += 1;
-      }
-    }
-    return salida;
-  };
 
   const crearPieza = (
     pieza: PiezaDespiece,
     x: number,
     y: number,
     largo: number,
-    orientacion: 'horizontal' | 'vertical',
+    orientacion: OrientacionPerfil,
+    largoDibujo = largo,
   ): Pieza => {
     contador += 1;
-    const largoRedondeado = Math.round(largo * 10) / 10;
+    const largoCorte = Math.round(largo * 10) / 10;
+    const largoVisual = Math.round(largoDibujo * 10) / 10;
     return {
       id: `preset-${Date.now()}-${contador}`,
       tipo: 'perfil',
       ref: pieza.ref || pieza.descripcion,
       descripcion: pieza.descripcion,
-      x: Math.round(x),
-      y: Math.round(y),
-      largoCm: largoRedondeado,
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+      largoCm: largoCorte,
+      anchoCm: orientacion === 'horizontal' ? largoVisual : grosor,
+      altoCm: orientacion === 'vertical' ? largoVisual : grosor,
       orientacion,
-      anchoCm: orientacion === 'horizontal' ? largoRedondeado : grosor,
-      altoCm: orientacion === 'vertical' ? largoRedondeado : grosor,
       espesorMm: 1,
       cantidad: 1,
       dePreset: true,
@@ -243,153 +261,260 @@ export function generarPiezasPreset(
     };
   };
 
-  const anchoUtil = Math.max(0, anchoCm - grosor * 2);
-  const altoUtil = Math.max(0, altoCm - grosor * 2);
+  const esAccesorio = (descripcion: string): boolean =>
+    /ANGULO|CHAPETA|BARRA|SOPORTE|MANIJA|SEGURO|TORNILL|REMACH|CHAZO|PISAVIDRIO/i.test(
+      descripcion,
+    ) || /^\s*ADAPTADOR/i.test(descripcion);
+  const esMarco = (descripcion: string): boolean =>
+    /CABEZAL|SILLAR|BOTAGUA|JAMBA|U 2X1|SUPER ?CORRIDA/i.test(descripcion);
+  const esDivisor = (descripcion: string): boolean => /DIVISOR|SEPARADOR/i.test(descripcion);
+  const esSuperior = (descripcion: string): boolean => /SUPERIOR|SUP\b|SUP\./i.test(descripcion);
+  const esInferior = (descripcion: string): boolean => /INFERIOR|INF\b|INF\./i.test(descripcion);
 
-  const noMarco = despiece.piezas.filter((p) => !esAccesorio(p.descripcion));
+  // Cada pieza del despiece conserva la dirección de su fórmula en el modelo.
+  const conBase: PiezaConBase[] = despiece.piezas.map((pieza, indice) => ({
+    pieza,
+    base: modelo.piezas[indice]?.medida.base ?? 'fija',
+  }));
+  const utiles = conBase.filter(({ pieza }) => !esAccesorio(pieza.descripcion));
+  const marco = utiles.filter(({ pieza }) => esMarco(pieza.descripcion));
 
   // ─────────────────── Marco exterior ───────────────────
-  // Tres frentes fijos: cabezal (top), sillar (bottom) y jambas (laterales).
-  const vert = noMarco.filter(
-    (p) => /JAMBA|BOTAGUA|U 2/i.test(p.descripcion) && p.medidaCm >= altoCm - grosor,
+  const marcoHorizontales = expandir(
+    marco.filter((item) => orientacionDe(item) === 'horizontal'),
   );
-  const top = noMarco.find(
-    (p) => /CABEZAL/i.test(p.descripcion) && Math.abs(p.medidaCm - anchoCm) < 1,
-  );
-  const bottom = noMarco.find(
-    (p) =>
-      (/SILLAR/i.test(p.descripcion) || /BOTAGUA/i.test(p.descripcion)) &&
-      Math.abs(p.medidaCm - anchoCm) < 1.5,
-  );
+  const marcoVerticales = expandir(marco.filter((item) => orientacionDe(item) === 'vertical'));
 
-  if (top) {
-    piezas.push(crearPieza(top, grosor, 0, top.medidaCm, 'horizontal'));
-  }
-  if (bottom && bottom !== top) {
-    piezas.push(crearPieza(bottom, grosor, altoCm - grosor, bottom.medidaCm, 'horizontal'));
+  if (marcoHorizontales.length > 0) {
+    const arriba = marcoHorizontales[0];
+    piezas.push(
+      crearPieza(
+        arriba,
+        centrar(arriba.medidaCm, anchoCm),
+        0,
+        arriba.medidaCm,
+        'horizontal',
+        Math.min(arriba.medidaCm, anchoCm),
+      ),
+    );
+    const abajo = marcoHorizontales[1];
+    if (abajo) {
+      piezas.push(
+        crearPieza(
+          abajo,
+          centrar(abajo.medidaCm, anchoCm),
+          altoCm - grosor,
+          abajo.medidaCm,
+          'horizontal',
+          Math.min(abajo.medidaCm, anchoCm),
+        ),
+      );
+    }
   }
 
-  const jambaIzq = vert[0];
-  const jambaDer = vert[1] ?? vert[0];
-  if (jambaIzq) {
-    piezas.push(crearPieza(jambaIzq, 0, grosor, jambaIzq.medidaCm, 'vertical'));
+  if (marcoVerticales.length > 0) {
+    const izquierda = marcoVerticales[0];
+    piezas.push(
+      crearPieza(
+        izquierda,
+        0,
+        centrar(izquierda.medidaCm, altoCm),
+        izquierda.medidaCm,
+        'vertical',
+        Math.min(izquierda.medidaCm, altoCm),
+      ),
+    );
+    const derecha = marcoVerticales[1];
+    if (derecha) {
+      piezas.push(
+        crearPieza(
+          derecha,
+          anchoCm - grosor,
+          centrar(derecha.medidaCm, altoCm),
+          derecha.medidaCm,
+          'vertical',
+          Math.min(derecha.medidaCm, altoCm),
+        ),
+      );
+    }
   }
-  if (jambaDer && jambaDer !== jambaIzq) {
-    piezas.push(crearPieza(jambaDer, anchoCm - grosor, grosor, jambaDer.medidaCm, 'vertical'));
-  }
-
-  // Si no hay jambas declaradas (modelos apilados de 3831 usan perfiles de
-  // cabezal en vertical), se forman los parales laterales internos.
-  const hojas = modelo.diseno.hojas.length > 0 ? modelo.diseno.hojas : [{ tipo: 'fija', proporcion: 1 }];
-  const totalProp = hojas.reduce((s, h) => s + h.proporcion, 0) || 1;
-  const apiladas = modelo.diseno.apiladas;
 
   // ─────────────────── Bandas de hoja ───────────────────
+  const hojas =
+    modelo.diseno.hojas.length > 0 ? modelo.diseno.hojas : [{ tipo: 'fija', proporcion: 1 }];
+  const totalProp = hojas.reduce((suma, hoja) => suma + hoja.proporcion, 0) || 1;
+  const apiladas = modelo.diseno.apiladas;
+
   const bandas: HojaPieza[] = [];
   if (apiladas) {
-    let yA = grosor;
+    let yBanda = grosor;
     for (const hoja of hojas) {
-      const altoB = (altoUtil * hoja.proporcion) / totalProp;
-      bandas.push({ x: grosor, y: yA, ancho: anchoUtil, alto: altoB });
-      yA += altoB;
+      const altoBanda = (altoUtil * hoja.proporcion) / totalProp;
+      bandas.push({ x: grosor, y: yBanda, ancho: anchoUtil, alto: altoBanda });
+      yBanda += altoBanda;
     }
   } else {
-    let xA = grosor;
+    let xBanda = grosor;
     for (const hoja of hojas) {
-      const anchoB = (anchoUtil * hoja.proporcion) / totalProp;
-      bandas.push({ x: xA, y: grosor, ancho: anchoB, alto: altoUtil });
-      xA += anchoB;
+      const anchoBanda = (anchoUtil * hoja.proporcion) / totalProp;
+      bandas.push({ x: xBanda, y: grosor, ancho: anchoBanda, alto: altoUtil });
+      xBanda += anchoBanda;
     }
   }
 
-    // Parales interiores: verticales que dividen hojas, repartidos entre bandas.
-  // `despiece.piezas` y `modelo.piezas` comparten orden: se emparejan por índice
-  // para conocer la base de la medida ('ancho' | 'alto' | 'fija').
-  const parales = despiece.piezas
-    .map((pieza, indice) => ({ pieza, base: modelo.piezas[indice]?.medida.base }))
-    .filter(
-      ({ pieza, base }) =>
-        base === 'alto' && /ENGANCHE|TRASLAPE|PARAL|DIVISOR/i.test(pieza.descripcion),
-    );
-  const paralesExpandidos = iterarPiezas(
-    parales.map((p) => p.pieza),
-    (p, i) => ({ pieza: p, i }),
-  );
-  // Costuras: borde izquierdo, quiebres entre bandas y borde derecho.
-  const costuras = [grosor, ...bandas.slice(1).map((b) => b.x), anchoCm - grosor];
-  paralesExpandidos.forEach(({ pieza: v }, indice) => {
-    const costura = costuras[indice % costuras.length];
-    // En la misma costura caben dos hojas superpuestas (enganche+traslape);
-    // se separan ligeramente para verse como dos perfiles.
-    const bloque = Math.floor(indice / Math.max(1, costuras.length));
-    const x = costura + (bloque % 2 === 0 ? -grosor / 3 : grosor / 3);
-    const largoM = Math.max(0, Math.min(v.medidaCm, altoUtil));
-    const posY = grosor + (altoUtil - largoM) / 2;
-    piezas.push(crearPieza(v, Math.min(anchoCm - grosor, Math.max(grosor, x)), Math.max(grosor, posY), largoM, 'vertical'));
-  });
+  const piezasHoja = utiles.filter(({ pieza }) => !esMarco(pieza.descripcion));
+  const divisores = piezasHoja.filter(({ pieza }) => esDivisor(pieza.descripcion));
 
-  // ─────────────────── Horizontales de hoja ───────────────────
-  const horizontales = despiece.piezas
-    .map((pieza, indice) => ({ pieza, base: modelo.piezas[indice]?.medida.base }))
-    .filter(
-      ({ pieza, base }) =>
-        base === 'ancho' &&
-        !/CABEZAL|SILLAR/i.test(pieza.descripcion) &&
-        /HORIZONTAL|HOR /i.test(pieza.descripcion),
-    )
-    .map(({ pieza }) => pieza);
-  const horizontalesExpandidos = iterarPiezas(horizontales, (p, i) => ({ pieza: p, i }));
-  let idxH = 0;
-  for (let b = 0; b < bandas.length; b += 1) {
-    const banda = bandas[b];
-    const arriba = horizontalesExpandidos[idxH % horizontalesExpandidos.length];
-    const abajo = horizontalesExpandidos[(idxH + 1) % horizontalesExpandidos.length];
-    if (arriba) {
-      const ajusteX = Math.max(0, banda.ancho - arriba.pieza.medidaCm) / 2;
+  if (apiladas && divisores.length > 0) {
+    // En modelos apilados el divisor separa las bandas (p. ej. fijo/basculante).
+    const listaDivisores = expandir(divisores);
+    listaDivisores.forEach((divisor, indice) => {
+      const juntura = bandas[indice + 1]?.y;
+      if (juntura === undefined) return;
       piezas.push(
-        crearPieza(arriba.pieza, banda.x + ajusteX, banda.y, arriba.pieza.medidaCm, 'horizontal'),
+        crearPieza(
+          divisor,
+          centrar(divisor.medidaCm, anchoCm),
+          Math.max(0, juntura - grosor / 2),
+          divisor.medidaCm,
+          'horizontal',
+          Math.min(divisor.medidaCm, anchoCm),
+        ),
+      );
+    });
+  }
+
+  const hojasSinDivisor = piezasHoja.filter(({ pieza }) => !esDivisor(pieza.descripcion));
+  const horizontales = expandir(
+    hojasSinDivisor.filter((item) => orientacionDe(item) === 'horizontal'),
+  );
+  const verticales = expandir(
+    hojasSinDivisor.filter((item) => orientacionDe(item) === 'vertical'),
+  );
+
+  // Rieles horizontales: si el modelo distingue superior/inferior, cada banda
+  // recibe el suyo; si no, se reparten dos por hoja.
+  const rielesSuperiores = horizontales.filter((pieza) => esSuperior(pieza.descripcion));
+  const rielesInferiores = horizontales.filter((pieza) => esInferior(pieza.descripcion));
+  const rielesNeutros = horizontales.filter(
+    (pieza) => !esSuperior(pieza.descripcion) && !esInferior(pieza.descripcion),
+  );
+
+  bandas.forEach((banda, indiceBanda) => {
+    const arriba =
+      rielesSuperiores.length > 0
+        ? rielesSuperiores[indiceBanda % rielesSuperiores.length]
+        : rielesNeutros.length > 0
+          ? rielesNeutros[(indiceBanda * 2) % rielesNeutros.length]
+          : horizontales[(indiceBanda * 2) % Math.max(1, horizontales.length)];
+    const abajo =
+      rielesInferiores.length > 0
+        ? rielesInferiores[indiceBanda % rielesInferiores.length]
+        : rielesNeutros.length > 1
+          ? rielesNeutros[(indiceBanda * 2 + 1) % rielesNeutros.length]
+          : undefined;
+
+    if (arriba) {
+      piezas.push(
+        crearPieza(
+          arriba,
+          banda.x + centrar(arriba.medidaCm, banda.ancho),
+          banda.y,
+          arriba.medidaCm,
+          'horizontal',
+          Math.min(arriba.medidaCm, banda.ancho),
+        ),
       );
     }
     if (abajo) {
-      const ajusteX = Math.max(0, banda.ancho - abajo.pieza.medidaCm) / 2;
       piezas.push(
-        crearPieza(abajo.pieza, banda.x + ajusteX, banda.y + banda.alto - grosor, abajo.pieza.medidaCm, 'horizontal'),
+        crearPieza(
+          abajo,
+          banda.x + centrar(abajo.medidaCm, banda.ancho),
+          banda.y + banda.alto - grosor,
+          abajo.medidaCm,
+          'horizontal',
+          Math.min(abajo.medidaCm, banda.ancho),
+        ),
       );
     }
-    idxH += 2;
-  }
+  });
+
+  // Parales verticales: enganches a un lado y traslapes al otro cuando el
+  // modelo los distingue; si no, se reparten por los bordes de cada hoja.
+  const enganches = verticales.filter((pieza) => /ENGANCHE/i.test(pieza.descripcion));
+  const traslapes = verticales.filter((pieza) => /TRASLAPE/i.test(pieza.descripcion));
+  const paralesNeutros = verticales.filter(
+    (pieza) => !/ENGANCHE|TRASLAPE/i.test(pieza.descripcion),
+  );
+
+  bandas.forEach((banda, indiceBanda) => {
+    const izquierda =
+      enganches.length > 0
+        ? enganches[indiceBanda % enganches.length]
+        : paralesNeutros.length > 0
+          ? paralesNeutros[(indiceBanda * 2) % paralesNeutros.length]
+          : undefined;
+    const derecha =
+      traslapes.length > 0
+        ? traslapes[indiceBanda % traslapes.length]
+        : paralesNeutros.length > 1
+          ? paralesNeutros[(indiceBanda * 2 + 1) % paralesNeutros.length]
+          : undefined;
+
+    if (izquierda) {
+      piezas.push(
+        crearPieza(
+          izquierda,
+          banda.x,
+          banda.y + centrar(izquierda.medidaCm, banda.alto),
+          izquierda.medidaCm,
+          'vertical',
+          Math.min(izquierda.medidaCm, banda.alto),
+        ),
+      );
+    }
+    if (derecha) {
+      piezas.push(
+        crearPieza(
+          derecha,
+          banda.x + banda.ancho - grosor,
+          banda.y + centrar(derecha.medidaCm, banda.alto),
+          derecha.medidaCm,
+          'vertical',
+          Math.min(derecha.medidaCm, banda.alto),
+        ),
+      );
+    }
+  });
 
   // ─────────────────── Vidrios encajados ───────────────────
-  const vidrios = despiece.vidrios.flatMap((v) =>
-    Array.from({ length: v.cantidad }, () => v),
+  const vidrios = despiece.vidrios.flatMap((vidrio) =>
+    Array.from({ length: Math.max(1, Math.round(vidrio.cantidad)) }, () => vidrio),
   );
-  // Agrupa vidrios por banda: si hay varios en la misma banda (p. ej. P.B.
-  // con dos paños), se reparten apilados verticalmente. Se mantienen las
-  // medidas reales (las correderas se superponen en el centro) y solo se
-  // fija la posición dentro del marco exterior.
   const porBanda = new Map<number, (typeof despiece.vidrios)[number][]>();
-  vidrios.forEach((vidrio, i) => {
-    const indiceBanda = i % Math.max(1, bandas.length);
+  vidrios.forEach((vidrio, indice) => {
+    const indiceBanda = indice % Math.max(1, bandas.length);
     const lista = porBanda.get(indiceBanda) ?? [];
     lista.push(vidrio);
     porBanda.set(indiceBanda, lista);
   });
+
   porBanda.forEach((lista, indiceBanda) => {
     const banda = bandas[indiceBanda];
     if (!banda) return;
-    const totalAlto = lista.reduce((suma, v) => suma + v.altoCm, 0);
-    let yActual =
-      banda.y +
-      (banda.alto - Math.min(totalAlto, banda.alto)) / 2;
+    const altoTotal = lista.reduce((suma, vidrio) => suma + vidrio.altoCm, 0);
+    let yActual = banda.y + Math.max(0, (banda.alto - Math.min(altoTotal, banda.alto)) / 2);
     if (lista.length === 1) {
-      const vidrio = lista[0];
-      yActual = banda.y + (banda.alto - vidrio.altoCm) / 2;
+      yActual = banda.y + Math.max(0, (banda.alto - lista[0].altoCm) / 2);
     }
     lista.forEach((vidrio) => {
-      const x = banda.x + (banda.ancho - vidrio.anchoCm) / 2;
-      const y = Math.max(grosor, yActual);
-      piezas.push(crearVidrio(vidrio, x, y, vidrio.anchoCm, vidrio.altoCm));
-      yActual += vidrio.altoCm + grosor / 2;
+      const ancho = Math.min(vidrio.anchoCm, banda.ancho);
+      const alto = Math.min(vidrio.altoCm, banda.alto);
+      const x = banda.x + Math.max(0, (banda.ancho - ancho) / 2);
+      const y = Math.min(Math.max(banda.y, yActual), banda.y + Math.max(0, banda.alto - alto));
+      piezas.push(crearVidrio(vidrio, x, y, ancho, alto));
+      yActual += alto + grosor / 2;
     });
   });
 

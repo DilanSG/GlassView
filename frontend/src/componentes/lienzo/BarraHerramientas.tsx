@@ -47,21 +47,6 @@ export default function BarraHerramientas({
         <span className="herramienta-nombre barra-expandir-nombre">Barra de herramientas</span>
       </button>
       <span className="barra-herramientas-separador" />
-      {HERRAMIENTAS.map((herramientaCad) => (
-        <button
-          key={herramientaCad.id}
-          type="button"
-          className={`herramienta-boton ${herramienta === herramientaCad.id ? 'activa' : ''}`}
-          onClick={() => onCambiarHerramienta(herramientaCad.id)}
-          title={herramientaCad.nombre}
-        >
-          <span className="icono-herramienta">
-            <IconoHerramienta id={herramientaCad.id} />
-          </span>
-          <span className="herramienta-nombre">{herramientaCad.nombre}</span>
-        </button>
-      ))}
-      <span className="barra-herramientas-separador" />
       <div className="barra-presets">
         <button
           type="button"
@@ -98,6 +83,21 @@ export default function BarraHerramientas({
           </div>
         )}
       </div>
+      <span className="barra-herramientas-separador" />
+      {HERRAMIENTAS.map((herramientaCad) => (
+        <button
+          key={herramientaCad.id}
+          type="button"
+          className={`herramienta-boton ${herramienta === herramientaCad.id ? 'activa' : ''}`}
+          onClick={() => onCambiarHerramienta(herramientaCad.id)}
+          title={herramientaCad.nombre}
+        >
+          <span className="icono-herramienta">
+            <IconoHerramienta id={herramientaCad.id} />
+          </span>
+          <span className="herramienta-nombre">{herramientaCad.nombre}</span>
+        </button>
+      ))}
     </div>
   );
 }

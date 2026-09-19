@@ -6,9 +6,10 @@ import type { ModeloVentaneria, PerfilCategoria, PerfilVentaneria, PiezaPlano } 
 import type { HerramientaCad } from '../constantes';
 import type { EstadoGuardado, Interaccion, InteraccionMover, RectanguloNuevo } from '../tipos/lienzo';
 import { MINIMO_SELECCION_PANTALLA, PX_POR_CM, TAMANO_ASA } from '../constantes';
-import { obtenerColorVar } from '../utils/colores';
+import { obtenerColorVar, obtenerPaletaPiezas } from '../utils/colores';
 import { redondearAPx, redondearCm } from '../utils/geometria';
 import { categoriaDeHerramienta } from '../tipos/lienzo';
+import { ordenarPiezasParaDibujo } from '../piezas/contexto';
 import { useRejilla } from '../hooks/useRejilla';
 import BarraHerramientas from '../componentes/lienzo/BarraHerramientas';
 import ControlesZoom from '../componentes/lienzo/ControlesZoom';
@@ -98,6 +99,7 @@ export default function LienzoPlano({
   const {
     vista,
     tamanoVista,
+    tamanoMedido,
     etapaRef,
     contenedorRef,
     aplicarZoom,
@@ -105,18 +107,19 @@ export default function LienzoPlano({
     iniciarPan,
     aplicarPan,
     terminarPan,
+    encuadrar,
   } = useZoomPan();
   const mundoRef = useRef<Konva.Group>(null);
+  const encuadradoRef = useRef(false);
   const inicioRef = useRef<{ x: number; y: number } | null>(null);
   const interaccionRef = useRef<Interaccion | null>(null);
   const clicPresetRef = useRef<{ x: number; y: number } | null>(null);
 
   const colorFondo = obtenerColorVar('--bg-secondary', '#ebebef');
-  const colorRelleno = obtenerColorVar('--bg-tertiary', '#dddde3');
   const colorBorde = obtenerColorVar('--border-strong', '#aeaeb2');
   const colorTexto = obtenerColorVar('--text-primary', '#1c1c1e');
   const colorAcento = '#2e7d32';
-  const colorVidrio = 'rgba(78, 165, 217, 0.30)';
+  const paleta = obtenerPaletaPiezas();
   const colorRejillaFina = obtenerColorVar('--linea-fina', 'rgba(0,0,0,0.06)');
   const colorRejillaFuerte = obtenerColorVar('--linea-fuerte', 'rgba(0,0,0,0.12)');
   const colorEtiqueta = obtenerColorVar('--text-tertiary', '#86878c');
@@ -126,16 +129,43 @@ export default function LienzoPlano({
   const piezaSeleccionada = piezas.find((p) => p.id === piezaSeleccionadaId) ?? null;
 
   useEffect(() => {
-    // En modo de solo vista la única herramienta disponible es la mano.
-    if (modoVista) {
-      setHerramienta('mano');
-    }
+    // En modo de solo vista la única herramienta es la mano; al volver a
+    // edición se restaura «Seleccionar» como herramienta predeterminada.
+    setHerramienta(modoVista ? 'mano' : 'seleccion');
   }, [modoVista]);
 
   useEffect(() => {
     const idsValidos = new Set(piezas.map((p) => p.id));
     setIdsSeleccionadas((anterior) => anterior.filter((id) => idsValidos.has(id)));
   }, [piezas]);
+
+  /** Rango en píxeles que ocupan las piezas (para encuadrar la vista). */
+  function rangoPiezas(): { x: number; y: number; ancho: number; alto: number } | null {
+    if (piezas.length === 0) return null;
+    const minX = Math.min(...piezas.map((pieza) => pieza.x));
+    const minY = Math.min(...piezas.map((pieza) => pieza.y));
+    const maxX = Math.max(...piezas.map((pieza) => pieza.x + pieza.anchoCm));
+    const maxY = Math.max(...piezas.map((pieza) => pieza.y + pieza.altoCm));
+    return {
+      x: minX * PX_POR_CM,
+      y: minY * PX_POR_CM,
+      ancho: (maxX - minX) * PX_POR_CM,
+      alto: (maxY - minY) * PX_POR_CM,
+    };
+  }
+
+  function encuadrarPiezas(): void {
+    encuadrar(rangoPiezas());
+  }
+
+  useEffect(() => {
+    // Al abrir un plano con contenido se encuadra una sola vez para aprovechar
+    // toda la pantalla; después el usuario controla el zoom y el desplazamiento.
+    if (encuadradoRef.current || piezas.length === 0 || !tamanoMedido) return;
+    if (tamanoVista.ancho <= 0 || tamanoVista.alto <= 0) return;
+    encuadrar(rangoPiezas());
+    encuadradoRef.current = true;
+  }, [piezas, tamanoVista, tamanoMedido, encuadrar]);
 
   const resultados = useMemo(() => {
     if (!piezaPendiente) return [];
@@ -172,6 +202,11 @@ export default function LienzoPlano({
 
   function puntoRelativo(): { x: number; y: number } | null {
     return mundoRef.current?.getRelativePointerPosition() ?? null;
+  }
+
+  /** Posición del puntero en coordenadas de pantalla (para desplazar la vista). */
+  function puntoPantalla(): { x: number; y: number } | null {
+    return etapaRef.current?.getPointerPosition() ?? null;
   }
 
   interface ObjetivoPlano {
@@ -217,8 +252,9 @@ export default function LienzoPlano({
     }
 
     const minimoSel = MINIMO_SELECCION_PANTALLA / vista.zoom;
-    for (let i = piezas.length - 1; i >= 0; i--) {
-      const pieza = piezas[i];
+    const piezasDibujo = ordenarPiezasParaDibujo(piezas);
+    for (let i = piezasDibujo.length - 1; i >= 0; i--) {
+      const pieza = piezasDibujo[i];
       const anchoPx = Math.max(0, pieza.anchoCm) * PX_POR_CM;
       const altoPx = Math.max(0, pieza.altoCm) * PX_POR_CM;
       const hitAncho = Math.max(anchoPx, minimoSel);
@@ -289,8 +325,12 @@ export default function LienzoPlano({
     if (!punto) return;
 
     // Herramienta de desplazar plano: arrastrar mueve la vista (no selecciona).
+    // Se usa la posición de pantalla para que el plano siga al cursor 1:1.
     if (herramienta === 'mano') {
-      iniciarPan(punto);
+      const pantalla = puntoPantalla();
+      if (pantalla) {
+        iniciarPan(pantalla);
+      }
       return;
     }
 
@@ -377,10 +417,11 @@ export default function LienzoPlano({
   }
 
   function alMoverRaton(): void {
+    const pantalla = puntoPantalla();
+    if (pantalla && aplicarPan(pantalla)) return;
+
     const punto = puntoRelativo();
     if (!punto) return;
-
-    if (aplicarPan(punto)) return;
 
     if (rectPreview && inicioRef.current) {
       const origen = inicioRef.current;
@@ -456,17 +497,23 @@ export default function LienzoPlano({
     }
 
     onCambiarPiezas(
-      piezas.map((p) =>
-        p.id === base.idPieza
-          ? {
-              ...p,
-              x: Math.max(0, Math.round(nuevoX * 10) / 10),
-              y: Math.max(0, Math.round(nuevoY * 10) / 10),
-              anchoCm: Math.max(0.2, Math.round(nuevoAncho * 10) / 10),
-              altoCm: Math.max(0.2, Math.round(nuevoAlto * 10) / 10),
-            }
-          : p,
-      ),
+      piezas.map((p) => {
+        if (p.id !== base.idPieza) return p;
+        const ancho = Math.max(0.2, Math.round(nuevoAncho * 10) / 10);
+        const alto = Math.max(0.2, Math.round(nuevoAlto * 10) / 10);
+        const esLamina = p.tipo === 'vidrio' || p.tipo === 'acrilico';
+        const esPunto = p.orientacion === 'punto';
+        return {
+          ...p,
+          x: Math.max(0, Math.round(nuevoX * 10) / 10),
+          y: Math.max(0, Math.round(nuevoY * 10) / 10),
+          anchoCm: ancho,
+          altoCm: alto,
+          // En perfiles el largo de corte sigue al eje redimensionado, para que
+          // el despiece (metros lineales) no quede desincronizado del dibujo.
+          largoCm: esLamina || esPunto ? p.largoCm : p.orientacion === 'horizontal' ? ancho : alto,
+        };
+      }),
     );
   }
 
@@ -617,13 +664,12 @@ export default function LienzoPlano({
       )}
 
       <div className="lienzo-scroll" ref={contenedorRef}>
-        {!modoVista && (
-          <ControlesZoom
-            aplicarZoom={aplicarZoom}
-            enPantallaCompleta={enPantallaCompleta}
-            onAbrirPantallaCompleta={onAbrirPantallaCompleta}
-          />
-        )}
+        <ControlesZoom
+          aplicarZoom={aplicarZoom}
+          enPantallaCompleta={enPantallaCompleta}
+          onAbrirPantallaCompleta={onAbrirPantallaCompleta}
+          onEncuadrar={encuadrarPiezas}
+        />
         <Stage
           ref={etapaRef}
           width={tamanoVista.ancho}
@@ -653,14 +699,13 @@ export default function LienzoPlano({
 
               <PiezasKonva
                 piezas={piezas}
+                perfiles={perfiles}
+                paleta={paleta}
                 piezaSeleccionadaId={piezaSeleccionadaId}
                 idsSeleccionadas={idsSeleccionadas}
                 rectPreview={rectPreview}
                 herramienta={herramienta}
                 colorAcento={colorAcento}
-                colorBorde={colorBorde}
-                colorRelleno={colorRelleno}
-                colorVidrio={colorVidrio}
               />
 
               {piezaSeleccionada && herramienta === 'seleccion' && idsSeleccionadas.length === 0 && (
@@ -687,6 +732,7 @@ export default function LienzoPlano({
         {piezaSeleccionada && medidorAbierto && (
           <MedidorPieza
             pieza={piezaSeleccionada}
+            perfiles={perfiles}
             vista={vista}
             onSeleccionarPieza={onSeleccionarPieza}
             onMedir={(cambios) => {

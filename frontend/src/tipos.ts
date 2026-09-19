@@ -7,6 +7,77 @@ export interface Proyecto {
   piezas: PiezaPlano[];
 }
 
+export type RolUsuario = 'usuario' | 'admin';
+export type MotivoAcceso = 'prueba' | 'suscripcion' | 'expirado' | 'bloqueado';
+
+export interface EstadoAcceso {
+  enPrueba: boolean;
+  diasPruebaRestantes: number;
+  pruebaHasta: string;
+  suscripcionActiva: boolean;
+  suscripcionHasta: string | null;
+  permiteAcceso: boolean;
+  motivo: MotivoAcceso;
+  precioUsd: number;
+}
+
+export interface PagoSuscripcion {
+  fecha: string | null;
+  montoUsd: number;
+  moneda: string;
+  montoLocal: number;
+  referencia: string;
+}
+
+export interface Usuario {
+  _id: string;
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  activo: boolean;
+  fechaRegistro: string | null;
+  pruebaHasta: string;
+  suscripcion: {
+    activa: boolean;
+    fechaInicio: string | null;
+    fechaFin: string | null;
+    ultimoPago: string | null;
+  };
+  pagos: PagoSuscripcion[];
+  pais?: string;
+  moneda?: string;
+  estado: EstadoAcceso;
+}
+
+export interface PrecioSuscripcion {
+  pais: string;
+  paisNombre: string;
+  moneda: string;
+  simbolo: string;
+  locale: string;
+  precioUsd: number;
+  precioLocal: number;
+  tasa: number;
+  fuente: 'base' | 'vivo' | 'respaldo';
+  actualizado: string | null;
+  periodoDias: number;
+  diasPrueba: number;
+}
+
+export interface DatosUsuarioAdmin {
+  nombre?: string;
+  email?: string;
+  contrasena?: string;
+  rol?: RolUsuario;
+  activo?: boolean;
+  pruebaHasta?: string;
+  suscripcion?: {
+    activa?: boolean;
+    fechaInicio?: string | null;
+    fechaFin?: string | null;
+  };
+}
+
 export interface HojaDiseno {
   tipo: 'corredera' | 'fija' | 'batiente' | 'basculante';
   proporcion: number;

@@ -1,38 +1,45 @@
-import { Rect, Circle } from 'react-konva';
-import type { PiezaPlano } from '../../tipos';
+import { useMemo } from 'react';
+import { Rect } from 'react-konva';
+import type { PerfilVentaneria, PiezaPlano } from '../../tipos';
 import { PX_POR_CM } from '../../constantes';
+import type { PaletaPiezas } from '../../utils/colores';
 import { radioSeguro } from '../../utils/geometria';
+import { crearContextosPiezas, ordenarPiezasParaDibujo } from '../../piezas/contexto';
+import PiezaKonva from '../../piezas/PiezaKonva';
 
 export interface PiezasKonvaProps {
   piezas: PiezaPlano[];
+  perfiles: PerfilVentaneria[];
+  paleta: PaletaPiezas;
   piezaSeleccionadaId: string | null;
   idsSeleccionadas: string[];
   rectPreview: { x: number; y: number; ancho: number; alto: number } | null;
   herramienta: string;
   colorAcento: string;
-  colorBorde: string;
-  colorRelleno: string;
-  colorVidrio: string;
 }
 
 /**
- * Capa principal del lienzo: piezas como rectángulos (o círculos para
- * elementos puntuales), el marco punteado de la pieza seleccionada y el
- * rectángulo de vista previa al arrastrar (dibujar o selección múltiple).
- * Todo es puramente visual (listening=false): la detección de clic/arrastre
- * se hace manualmente en LienzoPlano, fiable a cualquier zoom.
+ * Capa principal del lienzo: cada pieza se dibuja con su geometría real
+ * (perfiles, vidrios y herrajes), más el marco punteado de la pieza
+ * seleccionada y el rectángulo de vista previa al arrastrar (dibujar o
+ * selección múltiple). Todo es puramente visual (listening=false): la
+ * detección de clic/arrastre se hace manualmente en LienzoPlano.
  */
 export default function PiezasKonva({
   piezas,
+  perfiles,
+  paleta,
   piezaSeleccionadaId,
   idsSeleccionadas,
   rectPreview,
   herramienta,
   colorAcento,
-  colorBorde,
-  colorRelleno,
-  colorVidrio,
 }: PiezasKonvaProps): JSX.Element {
+  const contextos = useMemo(
+    () => crearContextosPiezas(piezas, perfiles),
+    [piezas, perfiles],
+  );
+
   return (
     <>
       {piezaSeleccionadaId && (() => {
@@ -55,40 +62,19 @@ export default function PiezasKonva({
         );
       })()}
 
-      {piezas.map((pieza) => {
-        const seleccionada =
-          pieza.id === piezaSeleccionadaId || idsSeleccionadas.includes(pieza.id);
-        const esPunto = pieza.orientacion === 'punto';
-        const anchoPx = Math.max(0, pieza.anchoCm) * PX_POR_CM;
-        const altoPx = Math.max(0, pieza.altoCm) * PX_POR_CM;
-        if (esPunto) {
-          return (
-            <Circle
-              key={pieza.id}
-              x={(pieza.x + pieza.anchoCm / 2) * PX_POR_CM}
-              y={(pieza.y + pieza.altoCm / 2) * PX_POR_CM}
-              radius={5}
-              fill={seleccionada ? colorAcento : colorRelleno}
-              stroke={colorBorde}
-              strokeWidth={1.5}
-              listening={false}
-            />
-          );
-        }
-        const esVidrio = pieza.tipo === 'vidrio' || pieza.tipo === 'acrilico';
-        const fill = esVidrio ? colorVidrio : colorRelleno;
+      {ordenarPiezasParaDibujo(piezas).map((pieza) => {
+        const contexto = contextos.get(pieza.id);
+        if (!contexto) return null;
         return (
-          <Rect
+          <PiezaKonva
             key={pieza.id}
-            x={pieza.x * PX_POR_CM}
-            y={pieza.y * PX_POR_CM}
-            width={anchoPx}
-            height={altoPx}
-            fill={seleccionada ? `${colorAcento}33` : fill}
-            stroke={seleccionada ? colorAcento : colorBorde}
-            strokeWidth={seleccionada ? 2 : 1}
-            cornerRadius={radioSeguro(anchoPx, altoPx, 2)}
-            listening={false}
+            pieza={pieza}
+            contexto={contexto}
+            paleta={paleta}
+            seleccionada={
+              pieza.id === piezaSeleccionadaId || idsSeleccionadas.includes(pieza.id)
+            }
+            colorAcento={colorAcento}
           />
         );
       })}

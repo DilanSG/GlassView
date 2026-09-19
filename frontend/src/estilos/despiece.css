@@ -1,11 +1,63 @@
 .panel-lateral {
-  width: 300px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  width: min(340px, 88vw);
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  max-height: 76vh;
+  padding: 0.9rem 1rem 1.1rem;
+  background-color: var(--bg-primary);
+  border-left: 1px solid var(--border);
+  border-radius: 10px 0 0 10px;
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.18);
   overflow-y: auto;
+}
+
+.panel-lateral-fondo {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--bg-primary) 40%, transparent);
+  cursor: default;
+}
+
+.panel-lateral-fondo:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--bg-primary) 40%, transparent);
+}
+
+.panel-lateral-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.panel-lateral-cabecera h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.panel-lateral-cerrar {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.panel-lateral-cerrar:hover:not(:disabled) {
+  background: none;
+  color: var(--text-primary);
 }
 
 .panel-lateral .panel-despiece {

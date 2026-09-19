@@ -49,10 +49,12 @@ export default function DisenoProyecto({
   const [piezaSeleccionadaId, setPiezaSeleccionadaId] = useState<string | null>(null);
   const [despiece, setDespiece] = useState<DespiecePiezas | null>(null);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  const [panelesVisibles, setPanelesVisibles] = useState(false);
   const [error, setError] = useState('');
   const [estadoGuardado, setEstadoGuardado] = useState<EstadoGuardado>('sincronizado');
   const [versionDespiece, setVersionDespiece] = useState(0);
 
+  const contenedorRef = useRef<HTMLDivElement>(null);
   const piezasRef = useRef<PiezaPlano[]>(proyecto.piezas);
   const esSucioRef = useRef(false);
   const guardandoRef = useRef(false);
@@ -69,6 +71,26 @@ export default function DisenoProyecto({
         // Los perfiles no son críticos para mostrar el proyecto.
       });
   }, []);
+
+  useEffect(() => {
+    // La pantalla completa nativa puede salir con Esc: se sincroniza el estado.
+    const alCambiar = (): void => setPantallaCompleta(document.fullscreenElement !== null);
+    document.addEventListener('fullscreenchange', alCambiar);
+    return () => document.removeEventListener('fullscreenchange', alCambiar);
+  }, []);
+
+  /** Abre o cierra la pantalla completa nativa del editor. */
+  async function alternarPantallaCompleta(): Promise<void> {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await contenedorRef.current?.requestFullscreen();
+      }
+    } catch {
+      // Si el navegador bloquea la pantalla completa, la edición continúa.
+    }
+  }
 
   /** Actualiza las piezas al instante (sin tocar el servidor). */
   function cambiarPiezas(nuevas: PiezaPlano[]): void {
@@ -193,9 +215,8 @@ export default function DisenoProyecto({
     exportarPlanoPdf(piezas, piezaSeleccionada, proyecto.nombre);
   }
 
-  /** Distribución completa del editor: lienzo y paneles laterales. En modo
-   *  de solo vista se muestra únicamente el lienzo, sin herramientas. */
-  function editorDistribucion(enPantallaCompleta: boolean) {
+  /** Lienzo a pantalla completa y paneles de piezas/despiece como capas. */
+  function editorDistribucion() {
     const esVista = modo === 'vista';
     return (
       <div className="editor-distribucion">
@@ -209,35 +230,53 @@ export default function DisenoProyecto({
           onGuardarCambios={() => void guardarPiezas()}
           onPiezaDibujada={anadirPieza}
           onPresetDibujado={colocarPreset}
-          onAbrirPantallaCompleta={
-            enPantallaCompleta ? undefined : () => setPantallaCompleta(true)
-          }
-          enPantallaCompleta={enPantallaCompleta}
+          onAbrirPantallaCompleta={() => void alternarPantallaCompleta()}
+          enPantallaCompleta={pantallaCompleta}
           modoVista={esVista}
           estadoGuardado={esVista ? undefined : estadoGuardado}
           onGuardar={esVista ? undefined : () => void guardarPiezas()}
         />
 
-        {!esVista && (
-          <div className="panel-lateral">
-            <PanelPiezas
-              piezas={piezas}
-              piezaSeleccionadaId={piezaSeleccionadaId}
-              onSeleccionarPieza={setPiezaSeleccionadaId}
-              onEliminarPieza={(id) => {
-                void eliminarPieza(id);
-              }}
+        {!esVista && panelesVisibles && (
+          <>
+            <button
+              type="button"
+              className="panel-lateral-fondo"
+              aria-label="Cerrar los paneles"
+              onClick={() => setPanelesVisibles(false)}
             />
+            <aside className="panel-lateral">
+              <header className="panel-lateral-cabecera">
+                <h2>Piezas y despiece</h2>
+                <button
+                  type="button"
+                  className="panel-lateral-cerrar"
+                  aria-label="Cerrar los paneles"
+                  onClick={() => setPanelesVisibles(false)}
+                >
+                  ×
+                </button>
+              </header>
 
-            <PanelDespiece
-              cantidadPiezas={piezas.length}
-              despiece={despiece}
-              piezaSeleccionada={piezaSeleccionada}
-              onEliminarPieza={(id) => {
-                void eliminarPieza(id);
-              }}
-            />
-          </div>
+              <PanelPiezas
+                piezas={piezas}
+                piezaSeleccionadaId={piezaSeleccionadaId}
+                onSeleccionarPieza={setPiezaSeleccionadaId}
+                onEliminarPieza={(id) => {
+                  void eliminarPieza(id);
+                }}
+              />
+
+              <PanelDespiece
+                cantidadPiezas={piezas.length}
+                despiece={despiece}
+                piezaSeleccionada={piezaSeleccionada}
+                onEliminarPieza={(id) => {
+                  void eliminarPieza(id);
+                }}
+              />
+            </aside>
+          </>
         )}
       </div>
     );
@@ -253,6 +292,13 @@ export default function DisenoProyecto({
     }
     return (
       <>
+        <button
+          type="button"
+          className={panelesVisibles ? 'activo' : ''}
+          onClick={() => setPanelesVisibles((visibles) => !visibles)}
+        >
+          Piezas y despiece
+        </button>
         <button type="button" onClick={descargarPlano}>
           Descargar plano
         </button>
@@ -264,7 +310,7 @@ export default function DisenoProyecto({
   }
 
   return (
-    <div className="pantalla editor-plano">
+    <div ref={contenedorRef} className="pantalla editor-plano">
       <header className="cabecera">
         <h1>{proyecto.nombre}</h1>
         <div className="acciones">{accionesCabecera()}</div>
@@ -272,24 +318,7 @@ export default function DisenoProyecto({
 
       {error && <p className="mensaje-error">{error}</p>}
 
-      {pantallaCompleta ? (
-        <div className="pantalla-completa">
-          <header className="cabecera-pantalla-completa">
-            <h1>{proyecto.nombre}</h1>
-            <div className="acciones">
-              <button type="button" onClick={descargarPlano}>
-                Descargar plano
-              </button>
-              <button type="button" onClick={() => setPantallaCompleta(false)}>
-                Salir de pantalla completa
-              </button>
-            </div>
-          </header>
-          <div className="pantalla-completa-cuerpo">{editorDistribucion(true)}</div>
-        </div>
-      ) : (
-        editorDistribucion(false)
-      )}
+      {editorDistribucion()}
     </div>
   );
 }

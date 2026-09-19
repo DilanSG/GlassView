@@ -17,6 +17,27 @@
   --advertencia: #ed6c02;
   --informacion: #0d47a1;
 
+  --acento: #1c1c1e;
+  --acento-texto: #f5f5f7;
+  --acento-hover: #3f3f46;
+  --sombra-tarjeta: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  /* Paleta de piezas del lienzo (aluminio, vidrio, herrajes) */
+  --aluminio: #d7dade;
+  --aluminio-claro: #e9ebee;
+  --aluminio-oscuro: #b6bac0;
+  --aluminio-borde: #82878e;
+  --aluminio-detalle: #6c7178;
+  --aluminio-corte: #e2e5e8;
+  --herraje: #aeb4bb;
+  --herraje-oscuro: #565c64;
+  --herraje-claro: #d9dde1;
+  --empaque: #4f5257;
+  --vidrio-borde: #3f88b8;
+  --vidrio-brillo: rgba(255, 255, 255, 0.5);
+  --acrilico: rgba(140, 205, 220, 0.35);
+  --acrilico-borde: #3f97a8;
+
   --linea-fina: color-mix(in srgb, var(--text-primary) 7%, transparent);
   --linea-fuerte: color-mix(in srgb, var(--text-primary) 14%, transparent);
   --resplandor: color-mix(in srgb, var(--text-primary) 5%, transparent);
@@ -42,6 +63,26 @@
   --error: #ef5350;
   --advertencia: #ffb74d;
   --informacion: #42a5f5;
+
+  --acento: #f2f2f7;
+  --acento-texto: #1c1c1e;
+  --acento-hover: #ffffff;
+  --sombra-tarjeta: 0 10px 30px rgba(0, 0, 0, 0.4);
+
+  --aluminio: #3b3e44;
+  --aluminio-claro: #4a4e55;
+  --aluminio-oscuro: #2e3136;
+  --aluminio-borde: #9aa0a8;
+  --aluminio-detalle: #b4bac2;
+  --aluminio-corte: #4f545b;
+  --herraje: #6d747c;
+  --herraje-oscuro: #c3c9d1;
+  --herraje-claro: #8b929a;
+  --empaque: #8a8f96;
+  --vidrio-borde: #6fb6e0;
+  --vidrio-brillo: rgba(255, 255, 255, 0.22);
+  --acrilico: rgba(96, 180, 200, 0.3);
+  --acrilico-borde: #63b7c9;
 
   --pulso-cable: color-mix(in srgb, var(--text-primary) 26%, transparent);
   --pulso-brillo: color-mix(in srgb, var(--text-primary) 12%, transparent);

@@ -1,20 +1,25 @@
-import type { CSSProperties } from 'react';
-import type { PiezaPlano } from '../../tipos';
+import { useMemo, type CSSProperties } from 'react';
+import type { PerfilVentaneria, PiezaPlano } from '../../tipos';
 import { valorCm } from '../../utils/geometria';
 import { PX_POR_CM } from '../../constantes';
 import type { VistaPlano } from '../../hooks/useZoomPan';
+import { crearContextosPiezas } from '../../piezas/contexto';
+import { ETIQUETA_CLASE } from '../../piezas/resolver';
+import SeccionPieza from '../../piezas/SeccionPieza';
 
 export interface MedidorPiezaProps {
   pieza: PiezaPlano;
+  perfiles: PerfilVentaneria[];
   vista: VistaPlano;
   onSeleccionarPieza: (id: string | null) => void;
   onMedir: (cambios: Partial<PiezaPlano>) => void;
   onCerrar: () => void;
 }
 
-/** Panel flotante con los campos de medida de la pieza seleccionada. */
+/** Panel flotante con los campos de medida y la sección de la pieza. */
 export default function MedidorPieza({
   pieza,
+  perfiles,
   vista,
   onSeleccionarPieza,
   onMedir,
@@ -23,6 +28,11 @@ export default function MedidorPieza({
   const { orientacion, tipo, anchoCm, altoCm } = pieza;
   const esPunto = orientacion === 'punto';
   const esVidrio = tipo === 'vidrio' || tipo === 'acrilico';
+
+  const contexto = useMemo(
+    () => crearContextosPiezas([pieza], perfiles).get(pieza.id),
+    [pieza, perfiles],
+  );
 
   const aplicarLargo = (texto: string): void => {
     const valor = valorCm(texto);
@@ -148,6 +158,22 @@ export default function MedidorPieza({
         </button>
       </div>
       {campos()}
+      {contexto && (
+        <div className="medidor-seccion">
+          <SeccionPieza
+            identidad={contexto.identidad}
+            params={contexto.params}
+            interior={contexto.interior}
+            pieza={pieza}
+            ancho={88}
+            alto={64}
+          />
+          <span className="medidor-seccion-etiqueta">
+            {ETIQUETA_CLASE[contexto.identidad.clase]}
+            {contexto.identidad.sistema ? ` · ${contexto.identidad.sistema}` : ''}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

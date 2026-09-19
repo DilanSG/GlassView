@@ -7,6 +7,7 @@ import esquemaPieza from './Pieza.js';
  */
 const esquemaProyecto = new Schema(
   {
+    usuario: { type: Schema.Types.ObjectId, ref: 'Usuario', required: true, index: true },
     nombre: { type: String, required: true, trim: true },
     cliente: { type: String, trim: true },
     direccion: { type: String, trim: true },

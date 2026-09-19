@@ -1,20 +1,25 @@
 import type {
+  DatosUsuarioAdmin,
   DespiecePiezas,
   DespieceVentaneria,
   ModeloVentaneria,
   PerfilVentaneria,
   PiezaPlano,
+  PrecioSuscripcion,
   Proyecto,
+  Usuario,
 } from '../tipos';
 
-const CLAVE_TOKEN = 'glassview-token-acceso';
+const CLAVE_TOKEN = 'glassview-token';
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const RUTA_ACCESO = '/acceso';
+const RUTAS_PUBLICAS = ['/auth/registro', '/auth/login', '/facturacion/precio'];
 
 interface RespuestaApi<T> {
   exito: boolean;
   datos: T;
   mensaje: string;
+  codigo?: string;
 }
 
 export function obtenerToken(): string | null {
@@ -50,7 +55,7 @@ function tokenVigente(token: string | null): boolean {
   return Number.isFinite(expiracion) && Date.now() <= expiracion;
 }
 
-/** Borra la sesión y devuelve al usuario a la pantalla del PIN. */
+/** Borra la sesión y devuelve al usuario a la pantalla de acceso. */
 function manejarSesionExpirada(): void {
   eliminarToken();
   if (window.location.pathname !== RUTA_ACCESO) {
@@ -60,15 +65,18 @@ function manejarSesionExpirada(): void {
 
 export class ErrorApi extends Error {
   estatusCodigo: number;
+  codigo?: string;
 
-  constructor(estatusCodigo: number, mensaje: string) {
+  constructor(estatusCodigo: number, mensaje: string, codigo?: string) {
     super(mensaje);
     this.estatusCodigo = estatusCodigo;
+    this.codigo = codigo;
   }
 }
 
 /**
- * Petición base: añade el token de acceso y parsea la respuesta uniforme del backend.
+ * Petición base: añade el token de sesión y parsea la respuesta uniforme del
+ * backend. En las rutas públicas no redirige al acceso si falta la sesión.
  */
 async function peticion<T>(ruta: string, opciones: RequestInit = {}): Promise<RespuestaApi<T>> {
   const cabeceras = new Headers(opciones.headers);
@@ -84,7 +92,7 @@ async function peticion<T>(ruta: string, opciones: RequestInit = {}): Promise<Re
     headers: cabeceras,
   });
 
-  if (respuesta.status === 401 && ruta !== '/auth/verificar-pin') {
+  if (respuesta.status === 401 && !RUTAS_PUBLICAS.includes(ruta)) {
     manejarSesionExpirada();
   }
 
@@ -101,18 +109,108 @@ async function peticion<T>(ruta: string, opciones: RequestInit = {}): Promise<Re
       respuesta.status,
       cuerpo?.mensaje ??
         'La API no respondió correctamente. Comprueba que VITE_API_URL apunte al backend (sin "/api" al final).',
+      cuerpo?.codigo,
     );
   }
 
   return cuerpo;
 }
 
-export async function verificarPin(pin: string): Promise<string> {
-  const respuesta = await peticion<{ token: string }>('/auth/verificar-pin', {
+interface SesionIniciada {
+  token: string;
+  usuario: Usuario;
+}
+
+export async function registrarse(datos: {
+  nombre: string;
+  email: string;
+  contrasena: string;
+}): Promise<SesionIniciada> {
+  const respuesta = await peticion<SesionIniciada>('/auth/registro', {
     method: 'POST',
-    body: JSON.stringify({ pin }),
+    body: JSON.stringify(datos),
   });
-  return respuesta.datos.token;
+  return respuesta.datos;
+}
+
+export async function iniciarSesion(email: string, contrasena: string): Promise<SesionIniciada> {
+  const respuesta = await peticion<SesionIniciada>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, contrasena }),
+  });
+  return respuesta.datos;
+}
+
+export async function obtenerPerfil(): Promise<Usuario> {
+  const respuesta = await peticion<Usuario>('/auth/perfil');
+  return respuesta.datos;
+}
+
+export async function actualizarPerfil(datos: {
+  nombre: string;
+  email: string;
+}): Promise<Usuario> {
+  const respuesta = await peticion<Usuario>('/auth/perfil', {
+    method: 'PUT',
+    body: JSON.stringify(datos),
+  });
+  return respuesta.datos;
+}
+
+export async function cambiarContrasena(
+  contrasenaActual: string,
+  contrasenaNueva: string,
+): Promise<void> {
+  await peticion<null>('/auth/contrasena', {
+    method: 'PUT',
+    body: JSON.stringify({ contrasenaActual, contrasenaNueva }),
+  });
+}
+
+export async function eliminarCuenta(): Promise<void> {
+  await peticion<null>('/auth/cuenta', { method: 'DELETE' });
+}
+
+export async function obtenerPrecioSuscripcion(pais?: string): Promise<PrecioSuscripcion> {
+  const consulta = pais ? `?pais=${encodeURIComponent(pais)}` : '';
+  const respuesta = await peticion<PrecioSuscripcion>(`/facturacion/precio${consulta}`);
+  return respuesta.datos;
+}
+
+export async function pagarSuscripcion(pais?: string): Promise<Usuario> {
+  const respuesta = await peticion<Usuario>('/facturacion/pagar', {
+    method: 'POST',
+    body: JSON.stringify({ pais }),
+  });
+  return respuesta.datos;
+}
+
+export async function listarUsuarios(): Promise<Usuario[]> {
+  const respuesta = await peticion<Usuario[]>('/auth/usuarios');
+  return respuesta.datos;
+}
+
+export async function crearUsuario(datos: DatosUsuarioAdmin): Promise<Usuario> {
+  const respuesta = await peticion<Usuario>('/auth/usuarios', {
+    method: 'POST',
+    body: JSON.stringify(datos),
+  });
+  return respuesta.datos;
+}
+
+export async function actualizarUsuario(
+  id: string,
+  datos: DatosUsuarioAdmin,
+): Promise<Usuario> {
+  const respuesta = await peticion<Usuario>(`/auth/usuarios/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(datos),
+  });
+  return respuesta.datos;
+}
+
+export async function eliminarUsuario(id: string): Promise<void> {
+  await peticion<null>(`/auth/usuarios/${id}`, { method: 'DELETE' });
 }
 
 export async function obtenerProyectos(): Promise<Proyecto[]> {

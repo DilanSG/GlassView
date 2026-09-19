@@ -1,13 +1,19 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { guardarToken, verificarPin } from '../api/clienteApi';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { iniciarSesion } from '../api/clienteApi';
 import PieDePagina from '../components/PieDePagina';
+import { useSesion } from '../contextos/SesionContexto';
 
 export default function Acceso() {
-  const [pin, setPin] = useState('');
+  const [email, setEmail] = useState('');
+  const [contrasena, setContrasena] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const { iniciarSesion: guardarSesion } = useSesion();
   const navegar = useNavigate();
+  const ubicacion = useLocation();
+  const destino =
+    (ubicacion.state as { desde?: { pathname?: string } } | null)?.desde?.pathname ?? '/proyectos';
 
   async function manejarEnvio(evento: FormEvent): Promise<void> {
     evento.preventDefault();
@@ -15,11 +21,11 @@ export default function Acceso() {
     setError('');
 
     try {
-      const token = await verificarPin(pin);
-      guardarToken(token);
-      navegar('/proyectos');
+      const sesion = await iniciarSesion(email, contrasena);
+      guardarSesion(sesion.usuario, sesion.token);
+      navegar(destino, { replace: true });
     } catch (causa) {
-      setError(causa instanceof Error ? causa.message : 'No se pudo acceder.');
+      setError(causa instanceof Error ? causa.message : 'No se pudo iniciar sesión.');
     } finally {
       setCargando(false);
     }
@@ -27,27 +33,50 @@ export default function Acceso() {
 
   return (
     <div className="pantalla-acceso">
-      <form className="tarjeta-acceso" onSubmit={manejarEnvio}>
-        <h1>GlassView</h1>
-        <p>Planos de instalaciones de cristalería</p>
+      <div className="columna-acceso">
+        <Link to="/" className="enlace-volver">
+          ← Volver al inicio
+        </Link>
 
-        <label htmlFor="pin">PIN de acceso</label>
-        <input
-          id="pin"
-          type="password"
-          value={pin}
-          onChange={(evento) => setPin(evento.target.value)}
-          placeholder="Introduce el PIN"
-          autoFocus
-          required
-        />
+        <form className="tarjeta-acceso" onSubmit={manejarEnvio}>
+          <img src="/icono.png" alt="" className="acceso-icono" />
+          <h1>GlassView</h1>
+          <p>Inicia sesión para continuar con tus planos</p>
 
-        {error && <p className="mensaje-error">{error}</p>}
+          <label htmlFor="email">Correo electrónico</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(evento) => setEmail(evento.target.value)}
+            placeholder="tucorreo@ejemplo.com"
+            autoComplete="email"
+            autoFocus
+            required
+          />
 
-        <button type="submit" disabled={cargando}>
-          {cargando ? 'Comprobando...' : 'Entrar'}
-        </button>
-      </form>
+          <label htmlFor="contrasena">Contraseña</label>
+          <input
+            id="contrasena"
+            type="password"
+            value={contrasena}
+            onChange={(evento) => setContrasena(evento.target.value)}
+            placeholder="Tu contraseña"
+            autoComplete="current-password"
+            required
+          />
+
+          {error && <p className="mensaje-error">{error}</p>}
+
+          <button type="submit" className="boton-cta boton-cta-ancho" disabled={cargando}>
+            {cargando ? 'Entrando…' : 'Entrar'}
+          </button>
+
+          <p className="enlace-secundario">
+            ¿No tienes cuenta? <Link to="/registro">Crea una gratis</Link>
+          </p>
+        </form>
+      </div>
       <PieDePagina />
     </div>
   );

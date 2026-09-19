@@ -18,6 +18,8 @@ interface PanPlano {
 export interface UseZoomPanResultado {
   vista: VistaPlano;
   tamanoVista: { ancho: number; alto: number };
+  /** true cuando el tamaño del contenedor ya se midió de verdad. */
+  tamanoMedido: boolean;
   etapaRef: RefObject<Konva.Stage>;
   contenedorRef: RefObject<HTMLDivElement>;
   aplicarZoom: (factor: number) => void;
@@ -25,6 +27,8 @@ export interface UseZoomPanResultado {
   iniciarPan: (punto: PuntoPlano) => void;
   aplicarPan: (punto: PuntoPlano) => boolean;
   terminarPan: () => boolean;
+  /** Ajusta la vista para mostrar todo el contenido en el lienzo. */
+  encuadrar: (rango: { x: number; y: number; ancho: number; alto: number } | null) => void;
 }
 
 export interface PuntoPlano {
@@ -39,6 +43,7 @@ export interface PuntoPlano {
 export function useZoomPan(): UseZoomPanResultado {
   const [vista, setVista] = useState<VistaPlano>({ zoom: 1, x: 0, y: 0 });
   const [tamanoVista, setTamanoVista] = useState({ ancho: 1280, alto: 720 });
+  const [tamanoMedido, setTamanoMedido] = useState(false);
 
   const etapaRef = useRef<Konva.Stage>(null);
   const contenedorRef = useRef<HTMLDivElement | null>(null);
@@ -48,9 +53,15 @@ export function useZoomPan(): UseZoomPanResultado {
     const contenedor = contenedorRef.current;
     if (!contenedor) return;
     const medir = (): void => {
-      const ancho = contenedor.clientWidth;
-      const alto = contenedor.clientHeight;
-      if (ancho > 0 && alto > 0) setTamanoVista({ ancho, alto });
+      // Enteros hacia abajo y sin repetir el mismo tamaño: evita bucles de
+      // redimensionado entre el Stage y su contenedor (parpadeo de scrollbars).
+      const ancho = Math.floor(contenedor.clientWidth);
+      const alto = Math.floor(contenedor.clientHeight);
+      if (ancho <= 0 || alto <= 0) return;
+      setTamanoVista((actual) =>
+        actual.ancho === ancho && actual.alto === alto ? actual : { ancho, alto },
+      );
+      setTamanoMedido(true);
     };
     medir();
     const observador = new ResizeObserver(medir);
@@ -102,7 +113,11 @@ export function useZoomPan(): UseZoomPanResultado {
     });
   }
 
-  /** Comienza un arrastre de la vista (herramienta «mano»). */
+  /**
+   * Comienza un arrastre de la vista (herramienta «mano»). El punto se recibe
+   * en coordenadas de pantalla para que el desplazamiento sea 1:1 con el
+   * cursor y no se realimente con el propio movimiento de la vista.
+   */
   function iniciarPan(punto: PuntoPlano): void {
     panRef.current = {
       x: punto.x,
@@ -118,8 +133,8 @@ export function useZoomPan(): UseZoomPanResultado {
     if (!pan) return false;
     setVista((actual) => ({
       ...actual,
-      x: pan.inicioX + (punto.x - pan.x) * actual.zoom,
-      y: pan.inicioY + (punto.y - pan.y) * actual.zoom,
+      x: pan.inicioX + (punto.x - pan.x),
+      y: pan.inicioY + (punto.y - pan.y),
     }));
     return true;
   }
@@ -131,9 +146,32 @@ export function useZoomPan(): UseZoomPanResultado {
     return true;
   }
 
+  /** Centra y escala la vista para que todo el contenido quepa en pantalla. */
+  function encuadrar(rango: { x: number; y: number; ancho: number; alto: number } | null): void {
+    const etapa = etapaRef.current;
+    if (!etapa || !rango || rango.ancho <= 0 || rango.alto <= 0) return;
+    const margen = 48;
+    const zoom = Math.min(
+      ZOOM_MAX,
+      Math.max(
+        ZOOM_MIN,
+        Math.min(
+          (etapa.width() - margen * 2) / rango.ancho,
+          (etapa.height() - margen * 2) / rango.alto,
+        ),
+      ),
+    );
+    setVista({
+      zoom,
+      x: (etapa.width() - rango.ancho * zoom) / 2 - rango.x * zoom,
+      y: (etapa.height() - rango.alto * zoom) / 2 - rango.y * zoom,
+    });
+  }
+
   return {
     vista,
     tamanoVista,
+    tamanoMedido,
     etapaRef,
     contenedorRef,
     aplicarZoom,
@@ -141,5 +179,6 @@ export function useZoomPan(): UseZoomPanResultado {
     iniciarPan,
     aplicarPan,
     terminarPan,
+    encuadrar,
   };
 }

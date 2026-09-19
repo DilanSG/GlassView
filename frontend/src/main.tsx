@@ -7,6 +7,7 @@ import './estilos/base.css';
 import './estilos/componentes.css';
 import './estilos/lienzo.css';
 import './estilos/despiece.css';
+import './estilos/marketing.css';
 
 document.documentElement.dataset.tema = obtenerTemaInicial();
 
