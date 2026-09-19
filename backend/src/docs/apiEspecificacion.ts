@@ -668,6 +668,15 @@ export const especificacionApi = {
                   nombre: { type: 'string', description: 'Nombre del proyecto', example: 'Escalera edificio San Martín' },
                   cliente: { type: 'string', example: 'Inmobiliaria Sur' },
                   direccion: { type: 'string', example: 'Av. Los Pinos 123' },
+                  hueco: {
+                    type: 'object',
+                    nullable: true,
+                    description: 'Medidas del hueco de obra en cm. Omitir o null para mapa libre.',
+                    properties: {
+                      anchoCm: { type: 'number', example: 120 },
+                      altoCm: { type: 'number', example: 100 },
+                    },
+                  },
                 },
               },
             },
@@ -735,6 +744,15 @@ export const especificacionApi = {
                   nombre: { type: 'string' },
                   cliente: { type: 'string' },
                   direccion: { type: 'string' },
+                  hueco: {
+                    type: 'object',
+                    nullable: true,
+                    description: 'Medidas del hueco en cm; null lo elimina (mapa libre).',
+                    properties: {
+                      anchoCm: { type: 'number' },
+                      altoCm: { type: 'number' },
+                    },
+                  },
                   piezas: {
                     type: 'array',
                     description: 'Piezas del plano',
@@ -856,6 +874,15 @@ export const especificacionApi = {
           nombre: { type: 'string' },
           cliente: { type: 'string' },
           direccion: { type: 'string' },
+          hueco: {
+            type: 'object',
+            nullable: true,
+            description: 'Medidas del hueco de obra en cm; null o ausente = mapa libre.',
+            properties: {
+              anchoCm: { type: 'number', example: 120 },
+              altoCm: { type: 'number', example: 100 },
+            },
+          },
           fechaCreacion: { type: 'string', format: 'date-time' },
           piezas: {
             type: 'array',

@@ -1,10 +1,10 @@
 import { useId, useMemo } from 'react';
 import type { PiezaPlano } from '../tipos';
-import { obtenerPaletaPiezas, type PaletaPiezas } from '../utils/colores';
+import { obtenerPaletaPiezas } from '../utils/colores';
 import { definicionDe } from './definiciones';
-import { GROSOR_FINO } from './primitivas';
+import PrimitivasSvg from './PrimitivasSvg';
 import { dimensionesSeccionDePieza, dimensionesSeccionPrevia } from './resolver';
-import type { IdentidadPieza, ParametrosPerfil, Primitiva } from './tipos';
+import type { IdentidadPieza, ParametrosPerfil } from './tipos';
 
 export interface SeccionPiezaProps {
   identidad: IdentidadPieza;
@@ -14,76 +14,8 @@ export interface SeccionPiezaProps {
   pieza?: PiezaPlano;
   ancho?: number;
   alto?: number;
-}
-
-function pintarPrimitiva(primitiva: Primitiva, indice: number, paleta: PaletaPiezas): JSX.Element {
-  const trazo = primitiva.tono ? paleta[primitiva.tono] : undefined;
-  const relleno = 'relleno' in primitiva && primitiva.relleno ? paleta[primitiva.relleno] : undefined;
-  const grosor = primitiva.grosor ?? GROSOR_FINO;
-  const dash = primitiva.trazo === 'discontinua' ? `${grosor * 5} ${grosor * 4}` : undefined;
-  const comunes = {
-    fill: relleno ?? 'none',
-    stroke: trazo,
-    strokeWidth: trazo ? grosor : 0,
-    strokeDasharray: dash,
-    opacity: primitiva.opacidad,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-
-  switch (primitiva.tipo) {
-    case 'linea':
-      return (
-        <line
-          key={indice}
-          x1={primitiva.x1}
-          y1={primitiva.y1}
-          x2={primitiva.x2}
-          y2={primitiva.y2}
-          {...comunes}
-        />
-      );
-    case 'rect':
-      return (
-        <rect
-          key={indice}
-          x={primitiva.x}
-          y={primitiva.y}
-          width={primitiva.ancho}
-          height={primitiva.alto}
-          rx={primitiva.radio ?? 0}
-          {...comunes}
-        />
-      );
-    case 'poligono':
-      return (
-        <polygon
-          key={indice}
-          points={primitiva.puntos.map((punto) => `${punto.x},${punto.y}`).join(' ')}
-          {...comunes}
-        />
-      );
-    case 'circulo':
-      return (
-        <circle
-          key={indice}
-          cx={primitiva.cx}
-          cy={primitiva.cy}
-          r={primitiva.radio}
-          {...comunes}
-        />
-      );
-    case 'arco': {
-      const x1 = primitiva.cx + primitiva.radio * Math.cos(primitiva.inicio);
-      const y1 = primitiva.cy + primitiva.radio * Math.sin(primitiva.inicio);
-      const x2 = primitiva.cx + primitiva.radio * Math.cos(primitiva.fin);
-      const y2 = primitiva.cy + primitiva.radio * Math.sin(primitiva.fin);
-      const arcoGrande = Math.abs(primitiva.fin - primitiva.inicio) > Math.PI ? 1 : 0;
-      const sentido = primitiva.fin > primitiva.inicio ? 1 : 0;
-      const d = `M ${x1} ${y1} A ${primitiva.radio} ${primitiva.radio} 0 ${arcoGrande} ${sentido} ${x2} ${y2}`;
-      return <path key={indice} d={d} {...comunes} fill="none" />;
-    }
-  }
+  /** Multiplica el grosor de los trazos (para mejorar el contraste). */
+  escalaTrazo?: number;
 }
 
 /**
@@ -98,6 +30,7 @@ export default function SeccionPieza({
   pieza,
   ancho = 96,
   alto = 72,
+  escalaTrazo = 1,
 }: SeccionPiezaProps): JSX.Element {
   const idRecorte = useId();
   const paleta = useMemo(() => obtenerPaletaPiezas(), []);
@@ -160,7 +93,7 @@ export default function SeccionPieza({
         <rect x={-margen} y={-margen} width={anchoCara + margen * 2} height={peralte + margen * 2} />
       </clipPath>
       <g clipPath={`url(#${idRecorte})`}>
-        {primitivas.map((primitiva, indice) => pintarPrimitiva(primitiva, indice, paleta))}
+        <PrimitivasSvg primitivas={primitivas} paleta={paleta} escalaTrazo={escalaTrazo} />
       </g>
     </svg>
   );

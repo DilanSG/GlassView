@@ -6,6 +6,7 @@ import {
   obtenerPerfilesVentaneria,
 } from '../api/clienteApi';
 import LienzoPlano from './LienzoPlano';
+import IconoAccion from './IconoAccion';
 import PanelPiezas from './PanelPiezas';
 import PanelDespiece from '../componentes/despiece/PanelDespiece';
 import { exportarPlanoPdf } from '../pdf/exportarPlanoPdf';
@@ -50,6 +51,7 @@ export default function DisenoProyecto({
   const [despiece, setDespiece] = useState<DespiecePiezas | null>(null);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [panelesVisibles, setPanelesVisibles] = useState(false);
+  const [vistaPanel, setVistaPanel] = useState<'piezas' | 'despiece'>('piezas');
   const [error, setError] = useState('');
   const [estadoGuardado, setEstadoGuardado] = useState<EstadoGuardado>('sincronizado');
   const [versionDespiece, setVersionDespiece] = useState(0);
@@ -185,11 +187,24 @@ export default function DisenoProyecto({
   ): Promise<void> {
     try {
       const piezasGeneradas = await generarPiezasPreset(modeloId, anchoCm, altoCm);
+      const minX = Math.min(...piezasGeneradas.map((pieza) => pieza.x));
+      const minY = Math.min(...piezasGeneradas.map((pieza) => pieza.y));
+      const maxX = Math.max(...piezasGeneradas.map((pieza) => pieza.x + pieza.anchoCm));
+      const maxY = Math.max(...piezasGeneradas.map((pieza) => pieza.y + pieza.altoCm));
+
+      // En planos con hueco, la plantilla queda dentro del vano.
+      let destinoX = xCm;
+      let destinoY = yCm;
+      if (proyecto.hueco) {
+        destinoX = Math.min(Math.max(0, xCm), Math.max(0, proyecto.hueco.anchoCm - (maxX - minX)));
+        destinoY = Math.min(Math.max(0, yCm), Math.max(0, proyecto.hueco.altoCm - (maxY - minY)));
+      }
+
       const trasladadas: PiezaPlano[] = piezasGeneradas.map((pieza) => ({
         ...pieza,
         id: `pieza-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        x: Math.round(pieza.x + xCm),
-        y: Math.round(pieza.y + yCm),
+        x: Math.round(pieza.x - minX + destinoX),
+        y: Math.round(pieza.y - minY + destinoY),
       }));
       cambiarPiezas([...piezasRef.current, ...trasladadas]);
       await guardarPiezas();
@@ -212,7 +227,7 @@ export default function DisenoProyecto({
 
   /** Descarga el PDF del plano con las piezas y cotas actuales. */
   function descargarPlano(): void {
-    exportarPlanoPdf(piezas, piezaSeleccionada, proyecto.nombre);
+    exportarPlanoPdf(piezas, piezaSeleccionada, proyecto.nombre, perfiles);
   }
 
   /** Lienzo a pantalla completa y paneles de piezas/despiece como capas. */
@@ -224,6 +239,7 @@ export default function DisenoProyecto({
           piezas={piezas}
           modelos={modelos}
           perfiles={perfiles}
+          hueco={proyecto.hueco ?? null}
           piezaSeleccionadaId={piezaSeleccionadaId}
           onSeleccionarPieza={setPiezaSeleccionadaId}
           onCambiarPiezas={cambiarPiezas}
@@ -238,45 +254,63 @@ export default function DisenoProyecto({
         />
 
         {!esVista && panelesVisibles && (
-          <>
-            <button
-              type="button"
-              className="panel-lateral-fondo"
-              aria-label="Cerrar los paneles"
-              onClick={() => setPanelesVisibles(false)}
-            />
-            <aside className="panel-lateral">
-              <header className="panel-lateral-cabecera">
-                <h2>Piezas y despiece</h2>
-                <button
-                  type="button"
-                  className="panel-lateral-cerrar"
-                  aria-label="Cerrar los paneles"
-                  onClick={() => setPanelesVisibles(false)}
-                >
-                  ×
-                </button>
-              </header>
+          <aside className="panel-lateral">
+            <header className="panel-lateral-cabecera">
+              <h2>Piezas y despiece</h2>
+              <button
+                type="button"
+                className="panel-lateral-cerrar"
+                aria-label="Cerrar los paneles"
+                onClick={() => setPanelesVisibles(false)}
+              >
+                ×
+              </button>
+            </header>
 
-              <PanelPiezas
-                piezas={piezas}
-                piezaSeleccionadaId={piezaSeleccionadaId}
-                onSeleccionarPieza={setPiezaSeleccionadaId}
-                onEliminarPieza={(id) => {
-                  void eliminarPieza(id);
-                }}
-              />
+            <div className="panel-lateral-pestanas" role="tablist" aria-label="Secciones del panel">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vistaPanel === 'piezas'}
+                className={`pestana ${vistaPanel === 'piezas' ? 'activa' : ''}`}
+                onClick={() => setVistaPanel('piezas')}
+              >
+                Piezas
+                <span className="pestana-cuenta">{piezas.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vistaPanel === 'despiece'}
+                className={`pestana ${vistaPanel === 'despiece' ? 'activa' : ''}`}
+                onClick={() => setVistaPanel('despiece')}
+              >
+                Despiece
+              </button>
+            </div>
 
-              <PanelDespiece
-                cantidadPiezas={piezas.length}
-                despiece={despiece}
-                piezaSeleccionada={piezaSeleccionada}
-                onEliminarPieza={(id) => {
-                  void eliminarPieza(id);
-                }}
-              />
-            </aside>
-          </>
+            <div className="panel-lateral-cuerpo">
+              {vistaPanel === 'piezas' ? (
+                <PanelPiezas
+                  piezas={piezas}
+                  piezaSeleccionadaId={piezaSeleccionadaId}
+                  onSeleccionarPieza={setPiezaSeleccionadaId}
+                  onEliminarPieza={(id) => {
+                    void eliminarPieza(id);
+                  }}
+                />
+              ) : (
+                <PanelDespiece
+                  cantidadPiezas={piezas.length}
+                  despiece={despiece}
+                  piezaSeleccionada={piezaSeleccionada}
+                  onEliminarPieza={(id) => {
+                    void eliminarPieza(id);
+                  }}
+                />
+              )}
+            </div>
+          </aside>
         )}
       </div>
     );
@@ -285,25 +319,57 @@ export default function DisenoProyecto({
   function accionesCabecera() {
     if (modo === 'vista') {
       return (
-        <button type="button" onClick={() => setModo('edicion')}>
-          Editar
-        </button>
+        <>
+          <button
+            type="button"
+            className="boton-icono"
+            onClick={descargarPlano}
+            title="Descargar plano en PDF"
+            aria-label="Descargar plano en PDF"
+          >
+            <IconoAccion nombre="descargar" />
+          </button>
+          <button
+            type="button"
+            className="boton-icono"
+            onClick={() => setModo('edicion')}
+            title="Editar plano"
+            aria-label="Editar plano"
+          >
+            <IconoAccion nombre="lapiz" />
+          </button>
+        </>
       );
     }
     return (
       <>
         <button
           type="button"
-          className={panelesVisibles ? 'activo' : ''}
+          className={`boton-icono ${panelesVisibles ? 'activo' : ''}`}
           onClick={() => setPanelesVisibles((visibles) => !visibles)}
+          title="Piezas y despiece"
+          aria-label="Piezas y despiece"
+          aria-pressed={panelesVisibles}
         >
-          Piezas y despiece
+          <IconoAccion nombre="panel" />
         </button>
-        <button type="button" onClick={descargarPlano}>
-          Descargar plano
+        <button
+          type="button"
+          className="boton-icono"
+          onClick={descargarPlano}
+          title="Descargar plano en PDF"
+          aria-label="Descargar plano en PDF"
+        >
+          <IconoAccion nombre="descargar" />
         </button>
-        <button type="button" onClick={() => setModo('vista')}>
-          Vista
+        <button
+          type="button"
+          className="boton-icono"
+          onClick={() => setModo('vista')}
+          title="Vista (solo lectura)"
+          aria-label="Vista (solo lectura)"
+        >
+          <IconoAccion nombre="ojo" />
         </button>
       </>
     );
@@ -312,7 +378,14 @@ export default function DisenoProyecto({
   return (
     <div ref={contenedorRef} className="pantalla editor-plano">
       <header className="cabecera">
-        <h1>{proyecto.nombre}</h1>
+        <div className="editor-titulo">
+          <h1>{proyecto.nombre}</h1>
+          <span className="editor-hueco">
+            {proyecto.hueco
+              ? `Hueco ${proyecto.hueco.anchoCm} × ${proyecto.hueco.altoCm} cm`
+              : 'Mapa libre'}
+          </span>
+        </div>
         <div className="acciones">{accionesCabecera()}</div>
       </header>
 

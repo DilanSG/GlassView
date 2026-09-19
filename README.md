@@ -1,244 +1,219 @@
-# GlassView
+<p align="center">
+  <img src="frontend/public/icono.png" alt="GlassView" width="112" />
+</p>
 
-Sistema profesional para el **diseño de planos de instalaciones de cristalería** y la generación automática de su **despiece**: perfiles, vidrio, herrajes y empaque, con medidas reales calculadas a partir de un catálogo de modelos de ventanería.
+<h1 align="center">GlassView</h1>
 
-> **GlassView es un producto comercial de IntoCode.** El código fuente es público para su lectura y estudio, pero su funcionalidad no puede copiarse ni emplearse con fines comerciales sin una licencia de IntoCode. Ver [Licencia](#licencia).
+<p align="center">
+  <strong>Planos y despiece de instalaciones de cristalería</strong><br />
+  Dibuja la ventana a escala real y obtén el despiece: perfiles, vidrio, herrajes y empaques.
+</p>
 
----
-
-## Índice
-
-- [Características](#características)
-- [Cuentas, prueba y suscripción](#cuentas-prueba-y-suscripción)
-- [Stack tecnológico](#stack-tecnológico)
-- [Arquitectura](#arquitectura)
-- [Estructura del repositorio](#estructura-del-repositorio)
-- [Puesta en marcha](#puesta-en-marcha)
-- [Scripts](#scripts)
-- [API](#api)
-- [Catálogo de ventanería](#catálogo-de-ventanería)
-- [Pruebas y verificación](#pruebas-y-verificación)
-- [Despliegue](#despliegue)
-- [Licencia y créditos](#licencia-y-créditos)
+<p align="center">
+  <img alt="Licencia" src="https://img.shields.io/badge/licencia-Comercial%20IntoCode-1f2937" />
+  <img alt="Estado" src="https://img.shields.io/badge/estado-en%20desarrollo-f59e0b" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" />
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white" />
+  <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" />
+  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white" />
+</p>
 
 ---
 
-## Características
+GlassView es una aplicación web para dibujar planos de instalaciones de cristalería y sacar de ahí el despiece de la obra: cuántos metros lineales de cada perfil, cuántos metros cuadrados de vidrio y qué herrajes y empaques se necesitan. El catálogo de modelos y las fórmulas de corte salen de un Excel real de ventanería (`descuentos de ventaneria.xlsx`), no de medidas inventadas.
 
-- **Landing pública de venta**: página de inicio con características, precios y llamada a la acción; el precio se muestra en la moneda del país del visitante.
-- **Cuentas de usuario**: registro e inicio de sesión con correo y contraseña (hash scrypt), perfil editable, cambio de contraseña y eliminación de cuenta.
-- **Prueba gratuita de 10 días** por cuenta; al terminar, las funciones de dibujo quedan bloqueadas hasta activar la suscripción.
-- **Suscripción de 10 USD/mes** con precio localizado por país (API de tipos de cambio en vivo con respaldo local) y pago simulado listo para conectar una pasarela real.
-- **Panel de administración**: listar, crear, editar, bloquear y eliminar usuarios; el administrador no puede ver los proyectos de nadie.
-- **Proyectos privados por usuario**: cada cuenta solo ve y edita sus propios planos.
-- **Lienzo de dibujo a escala real** en centímetros, con retícula de precisión, zoom, desplazamiento y herramientas de perfilería (cabezales, sillares, jambas, hojas, rieles, vidrios, rodachinas, manijas y empaques).
-- **Plantillas por modelo**: generan automáticamente todas las piezas de una ventana (marco, hojas y vidrios) con las medidas del fabricante.
-- **Catálogo de ventanería integrado**: 22 modelos reales en 7 familias (5020, 744, 8025, 7038, 3831, P.B. y Divibano), con fórmulas de medida propias.
-- **Despiece automático**: consolidación por REF en metros lineales, vidrio en metros cuadrados, accesorios y empaques, con precios opcionales.
-- **Exportación a PDF**: plano vectorial en A5 (horizontal o vertical) con cotas en centímetros en los cuatro lados.
-- **API documentada** con Swagger UI (OpenAPI 3.0) y respuestas JSON uniformes.
+El proyecto está en desarrollo activo. El dibujo, las plantillas, el despiece y el PDF funcionan de punta a punta; el cobro de la suscripción todavía es simulado y los precios del despiece aún no se muestran en la interfaz.
 
-## Cuentas, prueba y suscripción
+## Capturas
 
-1. Cualquier persona puede **registrarse** desde `/registro`; la cuenta arranca con una prueba de `TRIAL_DAYS` días (10 por defecto).
-2. Durante la prueba (o con la suscripción activa) el usuario puede usar el catálogo y sus proyectos. Al expirar, esas rutas responden `402 SUSCRIPCION_REQUERIDA` y el frontend redirige a **Facturación**.
-3. En `/facturacion` y en la landing se muestra el precio convertido a la moneda del país de compra. La detección usa, en este orden: parámetro `?pais=` (la landing lo envía según la zona horaria y el idioma), cabeceras geográficas del proxy (`cf-ipcountry`, `x-vercel-ip-country`), geolocalización por IP y el idioma del navegador.
-4. `POST /api/facturacion/pagar` **simula** el cobro, activa 30 días y guarda el comprobante (referencia, importe local y equivalente en USD). Es el punto exacto donde se conectará la pasarela real (Stripe, MercadoPago, etc.).
-5. El **administrador** (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) puede gestionar cuentas desde `/admin/usuarios`, pero nunca accede a los proyectos ajenos.
+| Tema claro | Tema oscuro |
+|---|---|
+| ![Editor en tema claro](docs/editor-despiece.png) | ![Editor en tema oscuro](docs/editor-despiece-oscuro.png) |
 
-## Stack tecnológico
+## Funcionalidad
+
+Cada cuenta arranca con una prueba gratuita de `TRIAL_DAYS` días (10 por defecto). Durante la prueba, o con la suscripción activa, se puede usar todo:
+
+- **Editor de planos a escala real** (todo en centímetros) con rejilla, zoom, desplazamiento, pantalla completa y modo vista. Si el proyecto tiene un *hueco de obra*, el área dibujable se limita a ese vano y las piezas no pueden salirse de él; si no, el lienzo es un mapa libre.
+- **Piezas con geometría propia**, no rectángulos genéricos: jambas, cabezales, sillares, enganches, traslapes, rieles, canales U, tubos, adaptadores y pisavidrios se dibujan como perfiles de aluminio con su cámara hueca, garganta de vidrio y detalles de cada tipo (gotero, peldaño, gancho, recibidor...). El vidrio, el acrílico, las rodachinas, manijas, seguros, empaques y felpas también tienen su forma. La misma geometría alimenta el lienzo Konva, las miniaturas de la lista de proyectos y el PDF.
+- **Plantillas por modelo**: 22 modelos repartidos en 7 familias (5020, 744, 8025, 7038, 3831, P.B. y divisiones de baño) que colocan automáticamente el marco, las hojas, los rieles, los parales y los vidrios con las medidas de corte del catálogo.
+- **Panel de piezas y despiece** con pestañas: la pestaña *Piezas* agrupa el plano en perfiles, vidrios y herrajes y permite seleccionar o eliminar cada pieza; la pestaña *Despiece* resume la obra y agrupa los cortes por REF con metros lineales, área de vidrio y conteo de herrajes.
+- **Exportación a PDF** vectorial en A5, con las piezas dibujadas con su geometría real y cotas en centímetros en los cuatro lados.
+- **Panel de administración** para listar, crear, bloquear y eliminar cuentas. El administrador no puede ver los proyectos de nadie: cada usuario solo accede a los suyos.
+
+### Precio local
+
+La suscripción cuesta `PRICE_USD` dólares al mes, pero se muestra convertida a la moneda del visitante. La detección del país prueba, en orden: el parámetro `?pais=`, las cabeceras geográficas del proxy (`cf-ipcountry`, `x-vercel-ip-country`), la geolocalización por IP y el idioma del navegador. Los tipos de cambio vienen de una API pública con caché de 12 horas y una tabla de respaldo local por si la API no responde. Las monedas sin decimales (COP, CLP, PYG, VES, JPY...) se redondean como se cobran en la práctica.
+
+`POST /api/facturacion/pagar` simula el cobro, activa 30 días y guarda el comprobante con la referencia, el importe local y su equivalente en USD. Es el único punto que hay que tocar para conectar Stripe, MercadoPago o lo que sea.
+
+## Stack
 
 | Capa | Tecnología |
 |---|---|
-| Backend | Node.js, Express, TypeScript (estricto) |
+| Backend | Node.js, Express y TypeScript estricto |
 | Base de datos | MongoDB (Atlas o local) con Mongoose |
-| Autenticación | Token HMAC + hash de contraseñas con scrypt (`node:crypto`) |
-| Divisas | `open.er-api.com` en vivo con caché y tabla de respaldo; geolocalización por IP |
-| Frontend | React 18, TypeScript, Vite |
-| Lienzo de dibujo | Konva.js (react-konva) |
-| Exportación a PDF | jsPDF (dibujo vectorial del plano con cotas) |
-| Animaciones | GSAP |
+| Sesión | Token firmado con HMAC + contraseñas con scrypt (`node:crypto`) |
+| Divisas | `open.er-api.com` en vivo, con caché y respaldo local |
+| Frontend | React 18, TypeScript y Vite |
+| Lienzo | Konva.js (react-konva) |
+| PDF | jsPDF, dibujo vectorial |
 | Documentación de API | Swagger UI (OpenAPI 3.0) |
 
 ## Arquitectura
 
-```
-┌─────────────────────────────┐       ┌──────────────────────────────┐
-│       Frontend (Vite)       │       │       Backend (Express)      │
-│                             │ HTTP  │                              │
-│  Landing + Páginas y        │──────▶│  Rutas → Controllers          │
-│  componentes                │ /api  │  → Services → Mongoose        │
-│  Sesión (contexto) + token  │       │  Cuentas, plan, catálogo      │
-└─────────────────────────────┘       └──────────────────────────────┘
-```
+El backend separa rutas, controladores y servicios: la lógica de negocio vive en `services/` y los controladores solo orquestan. Todas las respuestas tienen la forma `{ exito, datos, mensaje }`, y los errores de sesión o de plan agregan un `codigo` (`NO_AUTENTICADO`, `SUSCRIPCION_REQUERIDA`, `PERMISOS_INSUFICIENTES`) que el frontend usa para reaccionar.
 
-- El backend aísla la lógica de negocio en `services/` (catálogo, despieces, token, contraseñas, suscripción, divisas), lo que facilita migrar de MongoDB a PostgreSQL en el futuro.
-- El frontend consume la API a través de `clienteApi.ts`; nunca accede a la base de datos. La sesión vive en `contextos/SesionContexto.tsx`.
-- Todas las respuestas de la API usan el formato `{ exito, datos, mensaje }` y añaden `codigo` en los errores de sesión/plan.
+El frontend consume la API solo a través de `src/api/clienteApi.ts`; no conoce la base de datos. La sesión vive en `src/contextos/SesionContexto.tsx`.
+
+La pieza central del frontend es `src/piezas/`. Cada pieza se describe una sola vez con primitivas abstractas (líneas, rectángulos, polígonos) en centímetros, y esas primitivas se pintan después en Konva, en SVG y en el PDF. Por eso una jamba se ve igual en el editor, en la miniatura de la lista y en el plano exportado. La identidad de cada pieza (qué clase visual es) se resuelve combinando su tipo, su REF y su descripción, y hay ganchos (`PARAMETROS_POR_REF`, `DEFINICIONES_POR_SISTEMA`) preparados para cuando existan las secciones comerciales exactas de cada sistema.
+
+Los proyectos guardan una lista de piezas con su REF, posición y medidas. Todo es una pieza: un perfil, un vidrio, una rodachina o un empaque. Las plantillas solo son una forma cómoda de colocar muchas piezas de golpe. El orden de dibujo pone los vidrios detrás y los perfiles delante; dentro de eso, la última pieza seleccionada se dibuja encima para poder trabajar con piezas superpuestas.
 
 ## Estructura del repositorio
 
 ```
 GlassView/
-├── backend/                    # API REST (Express + TypeScript + Mongoose)
+├── backend/
 │   └── src/
-│       ├── config/             # Variables de entorno
-│       ├── controllers/        # Orquestación de los endpoints (auth, facturación, ...)
-│       ├── docs/               # Especificación OpenAPI (Swagger)
-│       ├── middleware/         # autenticar, requiereSuscripcion, soloAdmin, manejarErrores
-│       ├── models/             # Esquemas Mongoose (Usuario, Proyecto, Pieza)
-│       ├── routes/             # Definición de rutas
+│       ├── config/         # Lectura de variables de entorno
+│       ├── controllers/    # Endpoints (auth, catálogo, facturación, proyectos)
+│       ├── docs/           # Especificación OpenAPI
+│       ├── middleware/     # autenticar, requiereSuscripcion, soloAdmin, errores
+│       ├── models/         # Esquemas Mongoose (Usuario, Proyecto, Pieza)
+│       ├── routes/         # Definición de rutas
 │       └── services/
-│           ├── catalogo/       # Catálogo por familias (22 modelos)
-│           ├── bootstrap.ts           # Cuenta administradora inicial
-│           ├── contrasenas.ts         # Hash y verificación con scrypt
-│           ├── divisas.ts             # Países, tasas de cambio y detección de país
-│           ├── suscripcion.ts         # Estado de prueba/suscripción y usuario público
-│           ├── token.ts               # Firma y verificación HMAC
-│           └── ...
-├── frontend/                   # Interfaz de usuario (React + Vite)
+│           ├── catalogo/   # Modelos por familia y cálculo de despiece
+│           ├── bootstrap.ts        # Cuenta admin inicial
+│           ├── contrasenas.ts      # scrypt
+│           ├── despiecePiezas.ts   # Despiece por piezas y plantillas
+│           ├── divisas.ts          # Países, tasas y detección de país
+│           ├── perfilesVentaneria.ts # Diccionario de REFs
+│           ├── suscripcion.ts      # Prueba, suscripción y estado de acceso
+│           └── token.ts            # Firma y verificación HMAC
+├── frontend/
 │   └── src/
-│       ├── api/                # Cliente HTTP (clienteApi.ts)
-│       ├── components/         # Navegación, avisos y piezas de la landing
-│       ├── componentes/        # Lienzo Konva y paneles del editor
-│       ├── contextos/          # Sesión del usuario (SesionContexto.tsx)
-│       ├── estilos/            # CSS por secciones (incluye marketing.css)
-│       ├── hooks/              # useZoomPan, useRejilla, useTema
-│       ├── pages/              # Inicio, Acceso, Registro, Proyectos, Facturación, Perfil, ...
-│       ├── pdf/                # Exportación de planos a PDF
-│       └── utils/              # Geometría, colores y formato
-├── LICENSE                     # Licencia comercial de IntoCode
+│       ├── api/            # clienteApi.ts
+│       ├── componentes/    # Lienzo Konva, panel de despiece, diálogos
+│       ├── components/     # Navegación, editor, landing, piezas de UI
+│       ├── contextos/      # Sesión
+│       ├── estilos/        # CSS por zona (incluye el tema oscuro)
+│       ├── hooks/          # useZoomPan, useRejilla, useTema
+│       ├── pages/          # Inicio, Acceso, Registro, Proyectos, editor...
+│       ├── pdf/            # Exportación del plano
+│       ├── piezas/         # Motor de geometría paramétrica
+│       └── utils/          # Geometría, colores, formato, país
+├── docs/                   # Capturas para este README
+├── LICENSE
+└── README.md
 ```
 
-### Convenciones de código
+### Convenciones
 
-- Nombres en **español** (camelCase para funciones y variables, PascalCase para tipos y componentes, kebab-case para archivos CSS). No se mezclan idiomas en un mismo identificador.
-- Comentarios en español, solo cuando aportan valor.
-- TypeScript estricto en ambos paquetes; antes de cerrar un cambio deben compilar backend y frontend (`npm run build`).
+- Nombres en español: camelCase para funciones y variables, PascalCase para tipos y componentes, kebab-case para el CSS. Sin mezclar idiomas dentro de un identificador.
+- Los comentarios van solo donde hacen falta: lógica complicada, decisiones no obvias, unidades. No se comenta lo que ya dice el nombre.
+- TypeScript estricto en los dos paquetes. Antes de dar por cerrado un cambio, compilan backend y frontend.
 
 ## Puesta en marcha
 
-### Requisitos
-
-| Herramienta | Versión |
-|---|---|
-| Node.js | 20 o superior |
-| npm | Con Node |
-| MongoDB | Atlas o local |
-
-### Instalación
+Requisitos: Node.js 20 o superior y una instancia de MongoDB (Atlas o local).
 
 ```bash
 # Backend
 cd backend
 npm install
-cp .env.example .env   # configurar variables locales
+cp .env.example .env   # ajustar al menos MONGO_URI y SECRET_TOKEN
 
 # Frontend
 cd ../frontend
 npm install
-# .env opcional: en desarrollo se usa el proxy /api de Vite
+# el proxy de Vite manda /api al backend en desarrollo, no hace falta .env
 ```
 
 ### Variables de entorno
 
-**Backend (`.env`):**
+Backend (`.env`):
 
 | Variable | Descripción |
 |---|---|
-| `MONGO_URI` | Conexión a MongoDB (Atlas o local) |
-| `PORT` | Puerto del servidor (por defecto 4000) |
-| `SECRET_TOKEN` | Clave para firmar los tokens de sesión (HMAC) |
-| `TRIAL_DAYS` | Días de prueba gratuita por cuenta (por defecto 10) |
-| `PRICE_USD` | Precio mensual de la suscripción en dólares (por defecto 10) |
-| `ADMIN_EMAIL` | Correo de la cuenta administradora que se crea al arrancar (opcional) |
-| `ADMIN_PASSWORD` | Contraseña de esa cuenta administradora (opcional) |
+| `MONGO_URI` | Cadena de conexión a MongoDB |
+| `PORT` | Puerto del servidor (4000 por defecto) |
+| `SECRET_TOKEN` | Clave para firmar los tokens de sesión. Cambiarla siempre en producción |
+| `TRIAL_DAYS` | Días de prueba por cuenta (10 por defecto) |
+| `PRICE_USD` | Precio mensual de la suscripción en dólares |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Cuenta admin que se crea al arrancar, si se define |
 | `ALLOWED_ORIGINS` | Orígenes permitidos por CORS, separados por comas |
 
-**Frontend (producción):**
+Frontend, solo en producción:
 
 | Variable | Descripción |
 |---|---|
-| `VITE_API_URL` | URL base de la API (sin `/api` final) |
+| `VITE_API_URL` | URL base del backend, sin `/api` al final |
 
-### Ejecución en desarrollo
+### Desarrollo
 
 ```bash
-# Backend con recarga automática → http://localhost:4000
-cd backend
-npm run dev
-
-# Frontend → http://localhost:5173
-cd frontend
-npm run dev
+cd backend && npm run dev      # API con recarga automática en :4000
+cd frontend && npm run dev     # interfaz en :5173
 ```
-
-En desarrollo, Vite redirige `/api` al backend local mediante proxy.
 
 ## Scripts
 
-| Carpeta | Comando | Descripción |
+| Carpeta | Comando | Qué hace |
 |---|---|---|
-| backend | `npm run dev` | API con recarga automática (tsx watch) |
-| backend | `npm run build` | Compilación TypeScript a `dist/` |
-| backend | `npm start` | Ejecución de la API compilada |
-| frontend | `npm run dev` | Servidor de desarrollo Vite |
-| frontend | `npm run build` | TypeScript + empaquetado de producción |
+| backend | `npm run dev` | API con recarga automática |
+| backend | `npm run build` | Compila TypeScript a `dist/` |
+| backend | `npm start` | Corre la API compilada |
+| frontend | `npm run dev` | Servidor de desarrollo |
+| frontend | `npm run build` | Chequeo de tipos y empaquetado de producción |
 
 ## API
 
-Documentación interactiva en **`http://localhost:4000/api/docs`** (Swagger UI). Las rutas protegidas requieren la cabecera `x-token-acceso` con el token que devuelven el registro o el login.
+La documentación interactiva está en `http://localhost:4000/api/docs`. Las rutas protegidas piden la cabecera `x-token-acceso` con el token que devuelven el registro o el login.
 
 | Método y ruta | Descripción |
 |---|---|
 | `GET /api/estado` | Health check (público) |
-| `POST /api/auth/registro` | Crea la cuenta y arranca la prueba gratuita (público) |
-| `POST /api/auth/login` | Inicia sesión y devuelve el token (público) |
-| `GET` · `PUT /api/auth/perfil` | Lee / actualiza el perfil del usuario |
-| `PUT /api/auth/contrasena` | Cambia la contraseña actual |
-| `DELETE /api/auth/cuenta` | Elimina la cuenta y sus proyectos |
-| `GET /api/facturacion/precio` | Precio mensual convertido a la moneda del país (público) |
-| `GET /api/facturacion` | Estado de facturación del usuario |
-| `POST /api/facturacion/pagar` | Simula el pago y activa 30 días de suscripción |
-| `GET` · `POST /api/auth/usuarios` | (Admin) Lista / crea cuentas |
-| `GET` · `PUT` · `DELETE /api/auth/usuarios/:id` | (Admin) Lee / actualiza / elimina una cuenta |
-| `GET /api/catalogo-ventaneria` | Lista de modelos (id, familia, diseño, ejemplo) |
-| `GET /api/catalogo-ventaneria/perfiles` | Perfiles y productos del catálogo por REF |
-| `POST /api/catalogo-ventaneria/despiece` | Despiece de un modelo completo por medidas |
-| `POST /api/catalogo-ventaneria/despiece-piezas` | Despiece de las piezas dibujadas en un plano |
-| `POST /api/catalogo-ventaneria/preset` | Genera las piezas de una plantilla |
-| `GET /api/proyectos` · `POST /api/proyectos` | Lista / crea proyectos del usuario |
-| `GET /api/proyectos/:id` · `PUT` · `DELETE` | Lee / actualiza / elimina un proyecto propio |
-
-Los endpoints de catálogo y proyectos responden `402 SUSCRIPCION_REQUERIDA` cuando la prueba terminó y no hay suscripción activa; los de usuarios responden `403 PERMISOS_INSUFICIENTES` si quien llama no es administrador.
+| `POST /api/auth/registro` · `POST /api/auth/login` | Crear cuenta / iniciar sesión (públicos) |
+| `GET` · `PUT /api/auth/perfil` | Leer / actualizar el perfil |
+| `PUT /api/auth/contrasena` · `DELETE /api/auth/cuenta` | Cambiar contraseña / borrar la cuenta |
+| `GET /api/facturacion/precio` | Precio mensual en la moneda del visitante (público) |
+| `GET /api/facturacion` · `POST /api/facturacion/pagar` | Estado de facturación / pago simulado |
+| `GET` · `POST /api/auth/usuarios` | (Admin) Listar / crear cuentas |
+| `GET` · `PUT` · `DELETE /api/auth/usuarios/:id` | (Admin) Gestionar una cuenta |
+| `GET /api/catalogo-ventaneria` · `/perfiles` | Modelos y diccionario de REFs |
+| `POST /api/catalogo-ventaneria/despiece` · `/despiece-piezas` | Despiece por modelo / por piezas dibujadas |
+| `POST /api/catalogo-ventaneria/preset` | Piezas de una plantilla |
+| `GET` · `POST /api/proyectos` | Listar / crear proyectos propios |
+| `GET` · `PUT` · `DELETE /api/proyectos/:id` | Gestionar un proyecto propio |
 
 ## Catálogo de ventanería
 
-El catálogo vive en `backend/src/services/catalogo/` y se organiza por familia de sistema. Cada modelo define las REFs de perfiles usadas, las **fórmulas de medida** por lado o posición, el espesor del vidrio y los accesorios (empaques, felpas, rodachinas, etc.). El diccionario de perfiles con precios está en `backend/src/services/perfilesVentaneria.ts`.
+Vive en `backend/src/services/catalogo/`. Cada familia tiene su archivo `modelos*.ts` con los modelos (REFs de perfiles, fórmulas de medida, vidrios y accesorios), y `catalogo.ts` los une en el orden del Excel. Los helpers de `tipos.ts` (`a`, `h`, `f`, `p`, `v`) sirven para declarar las fórmulas de corte de forma corta; en los comentarios de ese archivo está explicado el formato.
 
-Para añadir un modelo nuevo:
+Para agregar un modelo:
 
-1. Crear o extender un archivo `modelosFamilia.ts` en `services/catalogo/` usando los helpers de `tipos.ts` (`a`, `h`, `f`, `p`, `v`).
-2. Registrarlo en la lista correspondiente de `catalogo.ts`.
-3. Dar de alta las REFs nuevas en `perfilesVentaneria.ts` para que el despiece las consolide y pueda tener precio.
-4. Verificar con `POST /api/catalogo-ventaneria/despiece` desde Swagger UI.
+1. Declararlo en el `modelos*.ts` de su familia.
+2. Añadir las REFs nuevas a `backend/src/services/perfilesVentaneria.ts` para que el despiece las consolide.
+3. Probar con `POST /api/catalogo-ventaneria/despiece` desde Swagger.
 
 ## Pruebas y verificación
 
-- No hay suite de tests automatizada; la validación se realiza con:
-  - peticiones de prueba (`curl` o Swagger UI) contra los endpoints;
-  - build de ambos paquetes (`npm run build`) como chequeo de tipos y de empaquetado.
-- Flujo recomendado de verificación manual: registrar una cuenta, comprobar los 10 días de prueba, vencer la prueba desde el panel admin y confirmar el `402`, pagar (simulado) y comprobar la reactivación.
-- Si se incorporan tests, los lugares previstos son `backend/test/` (node:test o vitest) y `frontend/src/**/*.test.tsx` (vitest + testing-library).
+No hay suite automatizada todavía. Lo que se hace hoy:
+
+- `npm run build` en ambos paquetes (TypeScript estricto) como chequeo mínimo antes de cerrar un cambio.
+- Probar los endpoints desde Swagger UI o con `curl`.
+- Para el plan: registrar una cuenta, vencer la prueba desde el panel admin y comprobar el `402`, pagar y verificar que se reactiva.
+
+Si se agregan tests, los sitios previstos son `backend/test/` (node:test) y `frontend/src/**/*.test.tsx` (vitest + testing-library).
 
 ## Despliegue
 
-- **Frontend**: desplegado en Vercel (`https://glass-view.vercel.app`). En producción debe configurarse `VITE_API_URL` con la URL del backend.
-- **Backend**: servicio Node.js que expone `/api`, con `MONGO_URI`, `SECRET_TOKEN`, `TRIAL_DAYS`, `PRICE_USD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `ALLOWED_ORIGINS` configurados en el entorno.
-- Detrás de un proxy (Vercel, Cloudflare, Nginx) la detección de país aprovecha las cabeceras geográficas; si no, se resuelve por IP o idioma.
+El frontend está publicado en Vercel (`https://glass-view.vercel.app`); en producción hay que configurar `VITE_API_URL` con la URL del backend. El backend es un servicio Node normal que expone `/api` y necesita `MONGO_URI`, `SECRET_TOKEN`, `TRIAL_DAYS`, `PRICE_USD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `ALLOWED_ORIGINS`. Detrás de un proxy con cabeceras geográficas (Cloudflare, Vercel, Nginx) la detección de país funciona mejor; si no, cae a la IP y al idioma.
 
-## Licencia y créditos
+## Licencia
 
-**GlassView** es propiedad de **IntoCode** y se distribuye bajo una [licencia comercial propia](LICENSE): el código es visible para lectura y estudio, pero **está prohibido copiar su funcionalidad o utilizarlo comercialmente** sin una licencia otorgada por IntoCode.
+GlassView pertenece a IntoCode y se distribuye bajo una licencia comercial propia (ver [LICENSE](LICENSE)): se puede leer y estudiar el código, pero está prohibido copiar la funcionalidad o usarla comercialmente sin una licencia de IntoCode.
 
-© 2026 **IntoCode** — Desarrollado por **Axl Anzola** y **Dilan Acuña**.
+© 2026 IntoCode — Desarrollado por Axl Anzola y Dilan Acuña.

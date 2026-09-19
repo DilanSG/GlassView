@@ -66,22 +66,6 @@ export function obtenerPerfilPorRef(ref: string): PerfilVentaneria | undefined {
   return perfilesVentaneria.find((perfil) => perfil.ref.toLowerCase() === ref.toLowerCase());
 }
 
-export function obtenerPerfilesPorCategoria(categoria: PerfilCategoria): PerfilVentaneria[] {
-  return perfilesVentaneria.filter((perfil) => perfil.categoria === categoria);
-}
-
-export function buscarPerfiles(termino: string): PerfilVentaneria[] {
-  const limpiado = termino.toLowerCase().trim();
-  if (!limpiado) {
-    return [];
-  }
-  return perfilesVentaneria.filter(
-    (perfil) =>
-      perfil.ref.toLowerCase().includes(limpiado) ||
-      perfil.descripcion.toLowerCase().includes(limpiado),
-  );
-}
-
 export const perfilesVentaneria: PerfilVentaneria[] = [
   // ─────────────────────────── VIDRIOS ───────────────────────────
   p('VID-3', 'VIDRIO 3 MM', 'vidrio', 'VIDRIO', 2, 2),

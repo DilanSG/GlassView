@@ -1,8 +1,15 @@
+export interface HuecoProyecto {
+  anchoCm: number;
+  altoCm: number;
+}
+
 export interface Proyecto {
   _id: string;
   nombre: string;
   cliente?: string;
   direccion?: string;
+  /** Medidas del hueco de obra; null o ausente = mapa libre. */
+  hueco?: HuecoProyecto | null;
   fechaCreacion: string;
   piezas: PiezaPlano[];
 }
@@ -97,16 +104,6 @@ export interface ModeloVentaneria {
   ejemplo: { ancho: number; alto: number };
 }
 
-export interface Ventana {
-  _id?: string;
-  modeloId: string;
-  nombre: string;
-  x: number;
-  y: number;
-  anchoCm: number;
-  altoCm: number;
-}
-
 export type OrientacionPieza = 'horizontal' | 'vertical' | 'punto';
 
 export interface PiezaPlano {
@@ -145,8 +142,6 @@ export interface PerfilVentaneria {
   descripcion: string;
   categoria: PerfilCategoria;
   sistema: string;
-  precioMetro?: number;
-  precioTramo?: number;
 }
 
 export interface LineaPiezaDespiece {
@@ -155,8 +150,6 @@ export interface LineaPiezaDespiece {
   tipo: string;
   cantidad: number;
   ml: number;
-  precioMetro?: number;
-  subtotal?: number;
 }
 
 export interface VidrioPiezaDespiece {
@@ -174,41 +167,4 @@ export interface DespiecePiezas {
   totalMl: number;
   totalVidrioM2: number;
   totalHerrajes: number;
-}
-
-export interface PiezaDespiece {
-  ref: string;
-  descripcion: string;
-  medidaCm: number;
-  cantidad: number;
-  corteGrados: number;
-  ml: number;
-}
-
-export interface VidrioDespiece {
-  descripcion: string;
-  material: 'vidrio' | 'acrilico';
-  espesorMm: number;
-  altoCm: number;
-  anchoCm: number;
-  cantidad: number;
-}
-
-export interface AccesorioDespiece {
-  seccion: string;
-  descripcion: string;
-  cantidad: number;
-}
-
-export interface DespieceVentaneria {
-  modeloId: string;
-  modeloNombre: string;
-  anchoCm: number;
-  altoCm: number;
-  areaM2: number;
-  piezas: PiezaDespiece[];
-  vidrios: VidrioDespiece[];
-  empaqueMl: number;
-  accesorios: AccesorioDespiece[];
-  totalMl: number;
 }

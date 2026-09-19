@@ -1,7 +1,6 @@
 import { a, h, f, p, v } from './tipos.js';
 import type { ModeloVentaneria } from './tipos.js';
 
-/** Modelos de la familia Divibano. */
 export const modelosDivibano: ModeloVentaneria[] = [
   {
     id: 'divibano-acrilico',

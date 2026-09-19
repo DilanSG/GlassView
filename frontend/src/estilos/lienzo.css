@@ -19,6 +19,7 @@
   width: 44px;
   max-height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px;
   flex-shrink: 0;
   align-self: flex-start;
@@ -30,12 +31,13 @@
 }
 
 .barra-herramientas.expandida {
-  width: 172px;
+  width: 186px;
 }
 
 .barra-boton-expandir {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 5px 5px;
   background: none;
@@ -45,15 +47,20 @@
   white-space: nowrap;
 }
 
+.barra-herramientas.expandida .barra-boton-expandir {
+  justify-content: flex-start;
+}
+
 .barra-boton-expandir:hover {
   color: var(--text-primary);
 }
 
 .barra-expandir-nombre {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: normal;
+  text-align: left;
 }
 
 .barra-herramientas.expandida .barra-boton-expandir svg {
@@ -70,14 +77,21 @@
 .herramienta-boton {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 8px;
+  padding: 7px 6px;
   background-color: transparent;
   color: var(--text-secondary);
+  border: 1px solid transparent;
   border-radius: 7px;
   white-space: nowrap;
   font-size: 0.8rem;
+}
+
+.barra-herramientas.expandida .herramienta-boton {
+  justify-content: flex-start;
+  padding: 6px 8px;
 }
 
 .herramienta-boton:hover:not(:disabled) {
@@ -94,11 +108,15 @@
 
 .icono-herramienta {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.icono-herramienta svg {
+  display: block;
 }
 
 .herramienta-nombre {
@@ -213,11 +231,6 @@
   color: var(--text-secondary);
 }
 
-.selector-ref-precio {
-  color: var(--text-tertiary);
-  font-size: 0.75rem;
-}
-
 .selector-ref-vacio {
   padding: 0.8rem;
   text-align: center;
@@ -302,11 +315,10 @@
 }
 
 .medidor-pieza {
-  position: absolute;
-  z-index: 30;
-  width: 200px;
-  left: max(8px, min(var(--x), calc(100% - 230px)));
-  top: max(8px, min(var(--y), calc(100% - 130px)));
+  width: 252px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-strong);
   border-radius: 10px;
@@ -316,6 +328,50 @@
   flex-direction: column;
   gap: 0.45rem;
   font-size: 0.78rem;
+}
+
+/* Panel flotante del lienzo: ficha de pieza y ayuda, abajo a la izquierda. */
+.panel-flotante-lienzo {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  max-width: min(360px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  pointer-events: none;
+}
+
+.panel-flotante-lienzo > * {
+  pointer-events: auto;
+}
+
+.medidor-especificaciones {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.18rem 0.7rem;
+  margin: 0.55rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+}
+
+.medidor-especificaciones > div {
+  display: contents;
+}
+
+.medidor-especificaciones dt {
+  color: var(--text-tertiary);
+}
+
+.medidor-especificaciones dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .medidor-cabecera {
@@ -390,28 +446,6 @@
   font-size: 0.72rem;
 }
 
-.medidor-seccion {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin-top: 0.15rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
-}
-
-.medidor-seccion svg {
-  flex-shrink: 0;
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-}
-
-.medidor-seccion-etiqueta {
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  line-height: 1.35;
-}
-
 .medidor-escala {
   position: absolute;
   z-index: 5;
@@ -420,25 +454,55 @@
   pointer-events: none;
 }
 
-.lienzo-ayuda {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
-  z-index: 6;
+.ayuda-popout {
+  width: min(320px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background-color: var(--bg-secondary);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  padding: 0.8rem 0.95rem;
+}
+
+.ayuda-popout-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.ayuda-popout-cabecera h3 {
   margin: 0;
-  max-width: min(92%, 920px);
-  padding: 0.35rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background-color: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.85rem;
+}
+
+.ayuda-popout-cerrar {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--text-tertiary);
-  text-align: center;
-  pointer-events: none;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ayuda-popout-cerrar:hover:not(:disabled) {
+  background: none;
+  color: var(--text-primary);
+}
+
+.ayuda-popout-lista {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
 .preset-dialog {
@@ -467,10 +531,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.editor-plano:fullscreen .lienzo-ayuda {
-  display: none;
 }
 
 .aviso-lienzo {

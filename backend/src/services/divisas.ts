@@ -275,6 +275,8 @@ const MONEDAS_SIN_DECIMALES = new Set(['COP', 'CLP', 'PYG', 'VES', 'JPY', 'KRW',
 /** Redondea el precio local según los decimales habituales de la moneda. */
 export function redondearPrecio(valor: number, moneda: string): number {
   if (MONEDAS_SIN_DECIMALES.has(moneda)) {
+    // En importes altos se redondea a la centena, para no pedir cifras como
+    // 41 237 COP; en importes bajos basta con la decena.
     const factor = valor >= 10000 ? 100 : 10;
     return Math.round(valor / factor) * factor;
   }

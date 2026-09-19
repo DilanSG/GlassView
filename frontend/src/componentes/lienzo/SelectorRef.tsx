@@ -54,9 +54,6 @@ export default function SelectorRef({
                 </span>
                 <span className="selector-ref-ref">{perfil.ref}</span>
                 <span className="selector-ref-desc">{perfil.descripcion}</span>
-                <span className="selector-ref-precio">
-                  {perfil.precioMetro ? `$${perfil.precioMetro}/m` : ''}
-                </span>
               </button>
             </li>
           );

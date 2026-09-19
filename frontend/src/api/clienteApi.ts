@@ -1,7 +1,6 @@
 import type {
   DatosUsuarioAdmin,
   DespiecePiezas,
-  DespieceVentaneria,
   ModeloVentaneria,
   PerfilVentaneria,
   PiezaPlano,
@@ -248,18 +247,6 @@ export async function eliminarProyecto(id: string): Promise<Proyecto> {
 
 export async function obtenerCatalogoVentaneria(): Promise<ModeloVentaneria[]> {
   const respuesta = await peticion<ModeloVentaneria[]>('/catalogo-ventaneria');
-  return respuesta.datos;
-}
-
-export async function calcularDespieceVentanaria(
-  modeloId: string,
-  anchoCm: number,
-  altoCm: number,
-): Promise<DespieceVentaneria> {
-  const respuesta = await peticion<DespieceVentaneria>('/catalogo-ventaneria/despiece', {
-    method: 'POST',
-    body: JSON.stringify({ modeloId, anchoCm, altoCm }),
-  });
   return respuesta.datos;
 }
 

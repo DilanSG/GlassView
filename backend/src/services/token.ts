@@ -52,6 +52,8 @@ function firmar(contenido: string): string {
 }
 
 function firmasIguales(firmaA: string, firmaB: string): boolean {
+  // Comparación en tiempo constante: fallar siempre en el mismo tiempo evita
+  // filtrar información sobre la firma esperada.
   const bufferA = Buffer.from(firmaA);
   const bufferB = Buffer.from(firmaB);
   return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB);

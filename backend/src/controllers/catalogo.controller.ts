@@ -17,7 +17,7 @@ export function obtenerCatalogo(_req: Request, res: Response): void {
       datos: obtenerModelosParaPaleta(),
       mensaje: 'Catálogo de ventanería cargado.',
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ exito: false, datos: null, mensaje: 'Error al cargar el catálogo.' });
   }
 }
@@ -29,7 +29,7 @@ export function obtenerPerfiles(_req: Request, res: Response): void {
       datos: perfilesVentaneria,
       mensaje: 'Perfiles cargados.',
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ exito: false, datos: null, mensaje: 'Error al cargar los perfiles.' });
   }
 }
@@ -68,7 +68,7 @@ export function calcularDespiece(req: Request, res: Response): void {
       datos: calcularDespieceVentaneria(modelo, anchoCm, altoCm),
       mensaje: 'Despiece calculado.',
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ exito: false, datos: null, mensaje: 'Error al calcular el despiece.' });
   }
 }
@@ -85,7 +85,7 @@ export function calcularDespiecePorPiezas(req: Request, res: Response): void {
       datos: calcularDespiecePiezas(piezas as Parameters<typeof calcularDespiecePiezas>[0]),
       mensaje: 'Despiece por piezas calculado.',
     });
-  } catch (error) {
+  } catch {
     res
       .status(500)
       .json({ exito: false, datos: null, mensaje: 'Error al calcular el despiece por piezas.' });
@@ -115,7 +115,7 @@ export function generarPreset(req: Request, res: Response): void {
     }
     const piezas = generarPiezasPreset(modeloId, anchoCm, altoCm);
     res.json({ exito: true, datos: piezas, mensaje: 'Preset generado.' });
-  } catch (error) {
+  } catch {
     res.status(500).json({ exito: false, datos: null, mensaje: 'Error al generar el preset.' });
   }
 }

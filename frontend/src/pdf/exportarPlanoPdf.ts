@@ -1,17 +1,39 @@
 import { jsPDF } from 'jspdf';
-import type { PiezaPlano } from '../tipos';
+import type { PerfilVentaneria, PiezaPlano } from '../tipos';
+import { crearContextosPiezas } from '../piezas/contexto';
+import { construirElevacion } from '../piezas/elevacion';
+import type { Primitiva, TonoPieza } from '../piezas/tipos';
 
 interface Tramo {
   inicio: number;
   fin: number;
 }
 
+/** Colores de impresión (fondo blanco) para los tonos de las piezas. */
+const PALETA_PDF: Record<TonoPieza, [number, number, number]> = {
+  perfil: [214, 216, 220],
+  perfilClaro: [233, 235, 238],
+  perfilOscuro: [180, 184, 190],
+  perfilBorde: [110, 114, 120],
+  perfilDetalle: [140, 144, 150],
+  corte: [226, 229, 232],
+  vidrio: [214, 235, 247],
+  vidrioBorde: [63, 136, 184],
+  vidrioBrillo: [255, 255, 255],
+  acrilico: [214, 240, 244],
+  acrilicoBorde: [63, 151, 168],
+  herraje: [174, 180, 187],
+  herrajeClaro: [217, 221, 225],
+  herrajeOscuro: [86, 92, 100],
+  empaque: [79, 82, 87],
+};
+
 /**
  * Calcula los tramos de cota a lo largo de un eje usando las aristas
- * interiores compartidas (una arista que cierra un perfil y abre otro).
- * Devuelve los tramos {inicio, fin} cuya suma es el total del plano.
+ * interiores compartidas: donde una pieza termina y otra empieza se coloca
+ * una división. La suma de los tramos es el total del plano.
  */
-export function tramosEje(
+function tramosEje(
   piezas: PiezaPlano[],
   orientacion: 'ancho' | 'alto',
   minimo: number,
@@ -31,6 +53,8 @@ export function tramosEje(
     .sort((a, b) => a - b);
   const seleccionadas: number[] = [];
   for (const division of divisiones) {
+    // Divisiones a menos de 1.5 cm de la anterior se descartan: dos cotas
+    // seguidas tan juntas quedarían solapadas.
     if (seleccionadas.length === 0 || division - seleccionadas[seleccionadas.length - 1] > 1.5) {
       seleccionadas.push(division);
     }
@@ -89,14 +113,113 @@ function dibujarCotaPdf(
   });
 }
 
+/** Dibuja las primitivas de una pieza en el PDF (coordenadas en cm → mm). */
+function dibujarPrimitivasPdf(
+  pdf: jsPDF,
+  primitivas: Primitiva[],
+  mapearX: (cm: number) => number,
+  mapearY: (cm: number) => number,
+  escala: number,
+): void {
+  for (const primitiva of primitivas) {
+    const grosor = Math.max(0.1, (primitiva.grosor ?? 0.07) * escala);
+    if (primitiva.tono) {
+      const color = PALETA_PDF[primitiva.tono];
+      pdf.setDrawColor(color[0], color[1], color[2]);
+    }
+    const relleno = 'relleno' in primitiva ? primitiva.relleno : undefined;
+    if (relleno) {
+      const color = PALETA_PDF[relleno];
+      pdf.setFillColor(color[0], color[1], color[2]);
+    }
+    pdf.setLineWidth(grosor);
+    if (primitiva.trazo === 'discontinua') {
+      pdf.setLineDashPattern([Math.max(0.4, grosor * 4), Math.max(0.3, grosor * 3)], 0);
+    } else {
+      pdf.setLineDashPattern([], 0);
+    }
+
+    switch (primitiva.tipo) {
+      case 'linea':
+        if (primitiva.tono) {
+          pdf.line(
+            mapearX(primitiva.x1),
+            mapearY(primitiva.y1),
+            mapearX(primitiva.x2),
+            mapearY(primitiva.y2),
+          );
+        }
+        break;
+      case 'rect': {
+        const estilo = `${relleno ? 'F' : ''}${primitiva.tono ? 'D' : ''}` || 'S';
+        const radio = (primitiva.radio ?? 0) * escala;
+        pdf.roundedRect(
+          mapearX(primitiva.x),
+          mapearY(primitiva.y),
+          primitiva.ancho * escala,
+          primitiva.alto * escala,
+          radio,
+          radio,
+          estilo,
+        );
+        break;
+      }
+      case 'poligono': {
+        const puntos = primitiva.puntos.map(
+          (punto) => [mapearX(punto.x), mapearY(punto.y)] as [number, number],
+        );
+        if (puntos.length < 2) break;
+        const estilo = `${relleno ? 'F' : ''}${primitiva.tono ? 'D' : ''}` || 'S';
+        const deltas: number[][] = [];
+        for (let indice = 1; indice < puntos.length; indice += 1) {
+          deltas.push([
+            puntos[indice][0] - puntos[indice - 1][0],
+            puntos[indice][1] - puntos[indice - 1][1],
+          ]);
+        }
+        deltas.push([
+          puntos[0][0] - puntos[puntos.length - 1][0],
+          puntos[0][1] - puntos[puntos.length - 1][1],
+        ]);
+        pdf.lines(deltas, puntos[0][0], puntos[0][1], [1, 1], estilo, true);
+        break;
+      }
+      case 'circulo': {
+        const estilo = `${relleno ? 'F' : ''}${primitiva.tono ? 'D' : ''}` || 'S';
+        pdf.circle(mapearX(primitiva.cx), mapearY(primitiva.cy), primitiva.radio * escala, estilo);
+        break;
+      }
+      case 'arco': {
+        const pasos = 12;
+        let anterior: [number, number] | null = null;
+        for (let indice = 0; indice <= pasos; indice += 1) {
+          const angulo = primitiva.inicio + ((primitiva.fin - primitiva.inicio) * indice) / pasos;
+          const punto: [number, number] = [
+            mapearX(primitiva.cx + primitiva.radio * Math.cos(angulo)),
+            mapearY(primitiva.cy + primitiva.radio * Math.sin(angulo)),
+          ];
+          if (anterior && primitiva.tono) {
+            pdf.line(anterior[0], anterior[1], punto[0], punto[1]);
+          }
+          anterior = punto;
+        }
+        break;
+      }
+    }
+  }
+  pdf.setLineDashPattern([], 0);
+}
+
 /**
  * Genera y descarga un PDF del plano con cotas en los cuatro lados.
+ * Las piezas se dibujan con su geometría real (perfiles, vidrios y herrajes).
  * Si hay una pieza seleccionada, las cotas se centran en esa pieza.
  */
 export function exportarPlanoPdf(
   piezas: PiezaPlano[],
   piezaSeleccionada: PiezaPlano | null,
   nombrePlano: string,
+  perfiles: PerfilVentaneria[] = [],
 ): void {
   const rectangulos = piezas.filter(
     (pieza) => pieza.orientacion !== 'punto' && pieza.anchoCm > 0 && pieza.altoCm > 0,
@@ -138,18 +261,17 @@ export function exportarPlanoPdf(
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, anchoPagina, altoPagina, 'F');
 
+  // Piezas con su geometría real, en el orden recibido (selección aparte).
+  const contextos = crearContextosPiezas(piezas, perfiles);
   piezas.forEach((pieza) => {
-    if (pieza.orientacion === 'punto') return;
-    const esVidrio = pieza.tipo === 'vidrio' || pieza.tipo === 'acrilico';
-    pdf.setFillColor(esVidrio ? 226 : 240, esVidrio ? 240 : 240, esVidrio ? 250 : 244);
-    pdf.setDrawColor(60, 60, 60);
-    pdf.setLineWidth(0.3);
-    pdf.rect(
-      mapearCm(pieza.x),
-      mapearCmY(pieza.y),
-      pieza.anchoCm * escala,
-      pieza.altoCm * escala,
-      'FD',
+    const contexto = contextos.get(pieza.id);
+    if (!contexto) return;
+    dibujarPrimitivasPdf(
+      pdf,
+      construirElevacion(pieza, contexto),
+      (cm) => mapearCm(pieza.x + cm),
+      (cm) => mapearCmY(pieza.y + cm),
+      escala,
     );
   });
 

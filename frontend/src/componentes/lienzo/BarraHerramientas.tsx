@@ -6,21 +6,25 @@ export interface BarraHerramientasProps {
   herramienta: string;
   barraExpandida: boolean;
   presetsAbierto: boolean;
+  ayudaAbierta: boolean;
   modelos: ModeloVentaneria[];
   onCambiarHerramienta: (herramienta: string) => void;
   onAlternarBarra: () => void;
   onAlternarPresets: () => void;
+  onAlternarAyuda: () => void;
 }
 
-/** Barra lateral con las herramientas de dibujo y las plantillas de ventanas. */
+/** Barra lateral con las plantillas, las herramientas de dibujo y la ayuda. */
 export default function BarraHerramientas({
   herramienta,
   barraExpandida,
   presetsAbierto,
+  ayudaAbierta,
   modelos,
   onCambiarHerramienta,
   onAlternarBarra,
   onAlternarPresets,
+  onAlternarAyuda,
 }: BarraHerramientasProps): JSX.Element {
   const esPresetActivo = herramienta.startsWith('preset-');
 
@@ -98,6 +102,18 @@ export default function BarraHerramientas({
           <span className="herramienta-nombre">{herramientaCad.nombre}</span>
         </button>
       ))}
+      <span className="barra-herramientas-separador" />
+      <button
+        type="button"
+        className={`herramienta-boton ${ayudaAbierta ? 'activa' : ''}`}
+        onClick={onAlternarAyuda}
+        title="Atajos y ayuda"
+      >
+        <span className="icono-herramienta">
+          <IconoHerramienta id="ayuda" />
+        </span>
+        <span className="herramienta-nombre">Ayuda</span>
+      </button>
     </div>
   );
 }

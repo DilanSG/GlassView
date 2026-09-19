@@ -24,9 +24,11 @@ export interface UseRejillaResultado {
 }
 
 /**
- * Rango visible del mundo (contando piezas, el zoom y el desplazamiento)
- * y las líneas de rejilla que se dibujan dentro de ese rango.
- * La rejilla marca un cuadrado por centímetro y una línea fuerte cada 10 cm.
+ * Rango visible del mundo (contando el zoom y el desplazamiento) y las líneas
+ * de rejilla que se dibujan dentro de ese rango. El rango se extiende para
+ * cubrir también las piezas: el fondo y la rejilla deben llegar hasta el
+ * contenido aunque el viewport no lo esté mostrando. La rejilla marca un
+ * cuadrado por centímetro y una línea fuerte cada 10 cm.
  */
 export function useRejilla(
   piezas: PiezaPlano[],

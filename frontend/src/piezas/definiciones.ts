@@ -3,13 +3,14 @@ import {
   GROSOR_MEDIO,
   arco,
   circulo,
-  linea,
   lineaPerfil,
   mapeoPerfil,
-  poligono,
   poligonoPerfil,
-  rect,
   rectPerfil,
+  rect,
+  circulo as circuloLocal,
+  poligono,
+  linea,
 } from './primitivas';
 import type {
   ClasePieza,
@@ -18,26 +19,29 @@ import type {
   DefinicionPieza,
   IdentidadPieza,
   Primitiva,
-  Punto,
 } from './tipos';
-
-const PARED_MINIMA = 0.08;
 
 interface OpcionesElevacion {
   canal?: 'cerrado' | 'abierto' | 'ninguno';
   inglete?: boolean;
   garganta?: boolean;
+  /** Ranura de vidrio centrada (perfiles horizontales de hoja). */
+  gargantaCentro?: boolean;
+  /** Puertos de tornillo cerca de los extremos (marco atornillado). */
+  tornillos?: boolean;
   gotero?: boolean;
   peldano?: boolean;
   labios?: boolean;
   gancho?: boolean;
-  solape?: boolean;
+  recibidor?: boolean;
+  riel?: boolean;
   triangulo?: boolean;
   redondeado?: boolean;
 }
 
 interface OpcionesSeccion {
   garganta?: boolean;
+  gargantaCentro?: boolean;
   canal?: 'cerrado' | 'abierto' | 'ninguno';
   labios?: boolean;
   redondeado?: boolean;
@@ -45,10 +49,10 @@ interface OpcionesSeccion {
 }
 
 /**
- * Motor de elevación de perfiles de aluminio: dibuja la pieza a lo largo de
- * su eje con la cámara hueca, la garganta de vidrio orientada al interior,
- * ingletes en los extremos y los rasgos propios de cada tipo (gotero,
- * peldaño, labios, gancho, solape...). Todas las coordenadas van en cm.
+ * Motor de elevación de perfiles de aluminio: dibuja el perfil a lo largo de
+ * su eje con el cuerpo, la cámara hueca, la garganta de vidrio orientada al
+ * interior, ingletes en los extremos y los rasgos de cada tipo (gotero,
+ * peldaño, labios, gancho, solape, riel...). Todas las coordenadas van en cm.
  */
 function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): Primitiva[] {
   const { largo, peralte, params, orientacion } = ctx;
@@ -66,13 +70,17 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
 
   const mapeo = mapeoPerfil(orientacion);
   const primitivas: Primitiva[] = [];
-  const pared = Math.max(PARED_MINIMA, Math.min(params.pared, peralte / 4));
+  // Pared visible: proporcional al perfil para que la cámara hueca se lea bien
+  // incluso en perfiles pequeños (algo más gruesa que la real).
+  const pared = Math.min(
+    Math.max(params.pared, Math.min(peralte, largo) * 0.09),
+    peralte / 3.2,
+  );
   const radio = Math.min(opciones.redondeado ? peralte * 0.3 : params.radio, peralte / 3, largo / 3);
   const acInterior = ctx.interior === 1 ? peralte : 0;
   const acExterior = ctx.interior === 1 ? 0 : peralte;
   const haciaDentro = ctx.interior === 1 ? -1 : 1;
 
-  // Contorno exterior del perfil
   primitivas.push(
     rectPerfil(mapeo, 0, 0, largo, peralte, {
       relleno: 'perfil',
@@ -82,22 +90,42 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
     }),
   );
 
-  const inglete = Math.min(params.inglete > 0 ? params.inglete : peralte, largo / 3);
-  const margenExtremo = opciones.inglete ? inglete : 0.05;
+  // Brillo longitudinal junto a la cara exterior: da volumen al aluminio.
+  primitivas.push(
+    lineaPerfil(mapeo, 0.15, acExterior + haciaDentro * pared * 0.5, largo - 0.15, acExterior + haciaDentro * pared * 0.5, {
+      tono: 'perfilClaro',
+      grosor: GROSOR_FINO,
+      opacidad: 0.9,
+    }),
+  );
 
-  // Cámara hueca del perfil (o canal abierto hacia el interior)
+  const inglete = Math.min(params.inglete > 0 ? params.inglete : peralte, largo / 3);
+  const margenExtremo = opciones.inglete ? inglete : 0.06;
+
   if (opciones.canal && opciones.canal !== 'ninguno') {
-    const cavidadLargo = Math.max(0.1, largo - margenExtremo * 2);
     const anchoInicial = opciones.canal === 'abierto' && ctx.interior === -1 ? 0 : pared;
     const anchoFinal = opciones.canal === 'abierto' && ctx.interior === 1 ? peralte : peralte - pared;
     primitivas.push(
-      rectPerfil(mapeo, margenExtremo, anchoInicial, cavidadLargo, anchoFinal - anchoInicial, {
+      rectPerfil(mapeo, margenExtremo, anchoInicial, largo - margenExtremo * 2, anchoFinal - anchoInicial, {
         relleno: 'perfilOscuro',
         tono: 'perfilDetalle',
         grosor: GROSOR_FINO,
         radio: Math.max(0, radio - pared),
       }),
     );
+    // Pared interior del tubo (segundo contorno)
+    if (opciones.canal === 'cerrado' && peralte > 1.6) {
+      primitivas.push(
+        rectPerfil(
+          mapeo,
+          margenExtremo + pared * 0.5,
+          anchoInicial + pared * 0.5,
+          largo - margenExtremo * 2 - pared,
+          anchoFinal - anchoInicial - pared,
+          { tono: 'perfilClaro', grosor: GROSOR_FINO, opacidad: 0.55 },
+        ),
+      );
+    }
   }
 
   // Garganta de vidrio sobre el lado interior
@@ -128,18 +156,54 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
     }
   }
 
-  // Gotero exterior del cabezal
+  // Garganta centrada (perfiles horizontales de hoja): el vidrio entra por el centro
+  if (opciones.gargantaCentro) {
+    const boca = Math.min(params.boca, peralte / 3);
+    const garganta = Math.min(params.garganta, peralte / 2.4);
+    const centro = peralte / 2;
+    primitivas.push(
+      rectPerfil(mapeo, 0, centro - garganta / 2, largo, garganta, {
+        relleno: 'perfilOscuro',
+        tono: 'perfilDetalle',
+        grosor: GROSOR_FINO,
+      }),
+    );
+    primitivas.push(
+      rectPerfil(mapeo, 0, centro - boca / 2, largo, boca, {
+        tono: 'perfilDetalle',
+        grosor: GROSOR_FINO,
+        opacidad: 0.6,
+      }),
+    );
+    const paso = Math.max(5, largo / 10);
+    for (let posicion = paso * 0.6; posicion < largo - 0.2; posicion += paso) {
+      primitivas.push(
+        lineaPerfil(mapeo, posicion, centro - boca / 2, posicion, centro + boca / 2, {
+          tono: 'empaque',
+          grosor: 0.12,
+        }),
+      );
+    }
+  }
+
+  // Gotero exterior del cabezal (labio de escurrimiento)
   if (opciones.gotero) {
-    const acGotero = acExterior + (ctx.interior === 1 ? 1 : -1) * Math.min(peralte * 0.3, 0.9);
+    const acGotero = acExterior + (ctx.interior === 1 ? 1 : -1) * Math.min(peralte * 0.32, 1);
     primitivas.push(
       lineaPerfil(mapeo, 0.2, acGotero, largo - 0.2, acGotero, {
         tono: 'perfilBorde',
+        grosor: GROSOR_MEDIO,
+      }),
+    );
+    primitivas.push(
+      lineaPerfil(mapeo, 0.2, acGotero + haciaDentro * 0.22, largo - 0.2, acGotero + haciaDentro * 0.22, {
+        tono: 'perfilDetalle',
         grosor: GROSOR_FINO,
       }),
     );
   }
 
-  // Peldaño del sillar
+  // Peldaño del sillar (asiento del vidrio y desagüe)
   if (opciones.peldano) {
     const acPeldano = acInterior + haciaDentro * Math.min(peralte * 0.45, 1.2);
     primitivas.push(
@@ -148,11 +212,21 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
         grosor: GROSOR_MEDIO,
       }),
     );
+    const paso = Math.max(6, largo / 8);
+    for (let posicion = paso * 0.5; posicion < largo; posicion += paso) {
+      primitivas.push(
+        lineaPerfil(mapeo, posicion, acExterior, posicion + haciaDentro * 0.5, acExterior + haciaDentro * 0.35, {
+          tono: 'perfilDetalle',
+          grosor: GROSOR_FINO,
+          opacidad: 0.7,
+        }),
+      );
+    }
   }
 
-  // Labios del riel (guían la hoja)
+  // Labios del riel o del canal U (guían la hoja)
   if (opciones.labios) {
-    const labio = Math.min(peralte * 0.2, 0.45);
+    const labio = Math.min(peralte * 0.22, 0.5);
     primitivas.push(
       rectPerfil(mapeo, 0.1, acInterior, largo - 0.2, haciaDentro * labio, {
         relleno: 'perfilClaro',
@@ -162,60 +236,121 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
     );
   }
 
-  // Gancho del enganche
+  // Guía del riel: ranura central por donde corre la rodachina
+  if (opciones.riel) {
+    const centro = peralte / 2;
+    primitivas.push(
+      rectPerfil(mapeo, 0.15, centro - 0.28, largo - 0.3, 0.56, {
+        relleno: 'perfilOscuro',
+        tono: 'perfilDetalle',
+        grosor: GROSOR_FINO,
+        radio: 0.1,
+      }),
+    );
+  }
+
+  // Gancho del enganche, con punta redondeada
   if (opciones.gancho) {
-    const garfio = Math.min(peralte * 0.4, 1.4);
+    const alto = Math.min(peralte * 0.55, 2.2);
+    const punta = Math.min(peralte * 0.22, 0.8);
     primitivas.push(
       poligonoPerfil(
         mapeo,
         [
           [0.1, acInterior],
           [largo - 0.1, acInterior],
-          [largo - 0.1, acInterior + haciaDentro * garfio],
-          [largo * 0.78, acInterior + haciaDentro * garfio * 0.55],
-          [largo * 0.78, acInterior + haciaDentro * 0.16],
-          [0.1, acInterior + haciaDentro * 0.16],
+          [largo - 0.1, acInterior + haciaDentro * alto],
+          [largo * 0.7, acInterior + haciaDentro * alto],
+          [largo * 0.7, acInterior + haciaDentro * punta],
+          [0.1, acInterior + haciaDentro * punta],
         ],
         { relleno: 'perfilClaro', tono: 'perfilBorde', grosor: GROSOR_FINO },
       ),
     );
+    const centroGancho = mapeo(largo * 0.7, acInterior + haciaDentro * ((alto + punta) / 2));
+    primitivas.push(
+      circulo(centroGancho.x, centroGancho.y, Math.max(0.08, (alto - punta) / 2), {
+        tono: 'perfilBorde',
+        grosor: GROSOR_FINO,
+      }),
+    );
   }
 
-  // Solape ancho del traslape
-  if (opciones.solape) {
-    const solape = Math.min(peralte * 0.35, 1.1);
+  // Recibidor del traslape: labio ancho con ranura de empaque
+  if (opciones.recibidor) {
+    const solape = Math.min(peralte * 0.45, 1.5);
     primitivas.push(
       rectPerfil(mapeo, 0.1, acInterior, largo - 0.2, haciaDentro * solape, {
+        relleno: 'perfilClaro',
+        tono: 'perfilBorde',
+        grosor: GROSOR_FINO,
+        radio: 0.08,
+      }),
+    );
+    primitivas.push(
+      lineaPerfil(
+        mapeo,
+        0.5,
+        acInterior + haciaDentro * solape * 0.45,
+        largo - 0.5,
+        acInterior + haciaDentro * solape * 0.45,
+        { tono: 'perfilDetalle', grosor: GROSOR_FINO },
+      ),
+    );
+    primitivas.push(
+      lineaPerfil(mapeo, 0.5, acInterior + haciaDentro * 0.45, largo - 0.5, acInterior + haciaDentro * 0.45, {
+        tono: 'empaque',
+        grosor: 0.14,
+      }),
+    );
+  }
+
+  // Pisavidrio: cuña curvada que sujeta el vidrio
+  if (opciones.triangulo) {
+    const altoCuna = ctx.interior === 1 ? peralte : -peralte;
+    const puntos: Array<[number, number]> = [[0, acExterior]];
+    const pasos = 6;
+    for (let indice = 1; indice <= pasos; indice += 1) {
+      const avance = indice / pasos;
+      puntos.push([
+        largo * avance,
+        acExterior + altoCuna * (0.28 + 0.27 * avance),
+      ]);
+    }
+    puntos.push([largo, acExterior + altoCuna * 0.55]);
+    primitivas.push(
+      poligonoPerfil(mapeo, puntos, {
         relleno: 'perfilClaro',
         tono: 'perfilBorde',
         grosor: GROSOR_FINO,
       }),
     );
     primitivas.push(
-      lineaPerfil(
-        mapeo,
-        0.6,
-        acInterior + haciaDentro * solape * 0.5,
-        largo - 0.6,
-        acInterior + haciaDentro * solape * 0.5,
-        { tono: 'perfilDetalle', grosor: GROSOR_FINO },
-      ),
+      lineaPerfil(mapeo, 0.2, acExterior + altoCuna * 0.12, largo - 0.2, acExterior + altoCuna * 0.12, {
+        tono: 'perfilDetalle',
+        grosor: GROSOR_FINO,
+        opacidad: 0.6,
+      }),
     );
   }
 
-  // Pisavidrio: cuña que sujeta el vidrio
-  if (opciones.triangulo) {
-    primitivas.push(
-      poligonoPerfil(
-        mapeo,
-        [
-          [0, acExterior],
-          [largo, acExterior],
-          [largo, acExterior + (ctx.interior === 1 ? peralte : -peralte) * 0.55],
-        ],
-        { relleno: 'perfilClaro', tono: 'perfilBorde', grosor: GROSOR_FINO },
-      ),
-    );
+  // Puertos de tornillo cerca de los extremos (marco atornillado)
+  if (opciones.tornillos) {
+    const anchoCavidadInicial = pared;
+    const anchoCavidadFinal = peralte - pared;
+    const centro = (anchoCavidadInicial + anchoCavidadFinal) / 2;
+    const separacion = Math.max(1.4, peralte * 0.6);
+    for (const posicion of [margenExtremo + separacion, largo - margenExtremo - separacion]) {
+      if (posicion <= margenExtremo + 0.3 || posicion >= largo - margenExtremo - 0.3) continue;
+      const punto = mapeo(posicion, centro);
+      primitivas.push(
+        circuloLocal(punto.x, punto.y, Math.min(0.22, peralte * 0.11), {
+          relleno: 'perfilClaro',
+          tono: 'perfilDetalle',
+          grosor: GROSOR_FINO,
+        }),
+      );
+    }
   }
 
   // Ingletes de marco en los extremos
@@ -255,7 +390,10 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
 function seccionPerfil(ctx: ContextoSeccion, opciones: OpcionesSeccion): Primitiva[] {
   const { anchoCara, peralte, params } = ctx;
   const primitivas: Primitiva[] = [];
-  const pared = Math.max(PARED_MINIMA, Math.min(params.pared, peralte / 4, anchoCara / 4));
+  const pared = Math.min(
+    Math.max(params.pared, Math.min(peralte, anchoCara) * 0.09),
+    Math.min(peralte, anchoCara) / 3.2,
+  );
   const radio = Math.min(opciones.redondeado ? peralte * 0.3 : params.radio, anchoCara / 3, peralte / 3);
 
   primitivas.push(
@@ -298,9 +436,9 @@ function seccionPerfil(ctx: ContextoSeccion, opciones: OpcionesSeccion): Primiti
     );
   }
 
-  if (opciones.garganta) {
-    const base = ctx.interior === 1 ? peralte : 0;
-    const haciaDentro = ctx.interior === 1 ? -1 : 1;
+  if (opciones.garganta || opciones.gargantaCentro) {
+    const base = opciones.gargantaCentro ? peralte / 2 : ctx.interior === 1 ? peralte : 0;
+    const haciaDentro = opciones.gargantaCentro ? 1 : ctx.interior === 1 ? -1 : 1;
     const garganta = Math.min(params.garganta, peralte / 2.6);
     const boca = Math.min(params.boca, anchoCara / 2.6);
     primitivas.push(
@@ -353,7 +491,10 @@ function seccionPerfil(ctx: ContextoSeccion, opciones: OpcionesSeccion): Primiti
   return primitivas;
 }
 
-/** Elevación de una lámina de vidrio o acrílico con sus reflejos. */
+/**
+ * Elevación de una lámina de vidrio o acrílico: panel translúcido con borde y
+ * bisel interior, sin reflejos.
+ */
 function elevacionLamina(
   ctx: ContextoElevacion,
   material: 'vidrio' | 'acrilico',
@@ -373,28 +514,13 @@ function elevacionLamina(
     }),
   ];
 
-  const anchoBanda = Math.min(ancho * 0.16, 6);
-  const desliz = Math.min(alto * 0.55, ancho * 0.9);
-  for (const inicio of [ancho * 0.18, ancho * 0.44]) {
-    primitivas.push(
-      poligono(
-        [
-          { x: inicio, y: 0 },
-          { x: inicio + anchoBanda, y: 0 },
-          { x: inicio + anchoBanda - desliz, y: alto },
-          { x: inicio - desliz, y: alto },
-        ],
-        { relleno: 'vidrioBrillo', opacidad: material === 'vidrio' ? 0.55 : 0.4 },
-      ),
-    );
-  }
-
+  // Bisel del canto de la lámina (línea interior fina)
   primitivas.push(
     rect(0.3, 0.3, Math.max(0.1, ancho - 0.6), Math.max(0.1, alto - 0.6), {
       tono: tonoBorde,
       grosor: GROSOR_FINO,
       radio: Math.max(0, radio - 0.2),
-      opacidad: 0.55,
+      opacidad: 0.45,
     }),
   );
 
@@ -422,19 +548,28 @@ function elevacionJunta(ctx: ContextoElevacion, tipo: 'empaque' | 'felpa'): Prim
       relleno: 'perfilOscuro',
       tono: 'perfilDetalle',
       grosor: GROSOR_FINO,
-      radio: Math.min(peralte / 2, 0.12),
+      radio: Math.min(peralte / 2, 0.14),
     }),
   ];
 
   if (tipo === 'empaque') {
-    const paso = Math.max(0.7, largo / 36);
-    const puntos: Punto[] = [];
-    let alterno = false;
-    for (let posicion = 0; posicion <= largo; posicion += paso) {
-      puntos.push(mapeo(posicion, base + haciaDentro * (alterno ? peralte * 0.35 : peralte * 0.85)));
-      alterno = !alterno;
+    // Junta tubular con labios de sellado
+    primitivas.push(
+      lineaPerfil(mapeo, 0.2, base + haciaDentro * peralte * 0.5, largo - 0.2, base + haciaDentro * peralte * 0.5, {
+        tono: 'empaque',
+        grosor: GROSOR_FINO,
+        opacidad: 0.8,
+      }),
+    );
+    const paso = Math.max(2.5, largo / 24);
+    for (let posicion = paso * 0.5; posicion < largo; posicion += paso) {
+      primitivas.push(
+        lineaPerfil(mapeo, posicion, base, posicion + haciaDentro * peralte * 0.35, base + haciaDentro * peralte * 0.95, {
+          tono: 'empaque',
+          grosor: GROSOR_FINO,
+        }),
+      );
     }
-    primitivas.push(poligono(puntos, { tono: 'empaque', grosor: GROSOR_FINO }));
   } else {
     const paso = Math.max(0.5, largo / 60);
     for (let posicion = 0; posicion <= largo; posicion += paso) {
@@ -481,24 +616,35 @@ function elevacionRodachina(ctx: ContextoElevacion): Primitiva[] {
   ];
 }
 
-/** Manija: placa de anclaje y palanca. */
+/** Manija: escudo de anclaje, palanca inclinada y remate. */
 function elevacionManija(ctx: ContextoElevacion): Primitiva[] {
   const ancho = ctx.pieza.anchoCm;
   const alto = ctx.pieza.altoCm;
+  const yPalanca = alto * 0.58;
 
   return [
-    rect(ancho * 0.32, alto * 0.14, ancho * 0.36, alto * 0.34, {
+    // Escudo
+    rect(ancho * 0.34, alto * 0.1, ancho * 0.32, alto * 0.42, {
       relleno: 'herraje',
       tono: 'herrajeOscuro',
       grosor: GROSOR_FINO,
-      radio: 0.07,
+      radio: 0.1,
     }),
-    circulo(ancho * 0.5, alto * 0.31, Math.min(ancho, alto) * 0.08, { relleno: 'herrajeOscuro' }),
-    rect(ancho * 0.14, alto * 0.55, ancho * 0.72, Math.max(0.24, alto * 0.16), {
-      relleno: 'herraje',
+    circulo(ancho * 0.5, alto * 0.3, Math.min(ancho, alto) * 0.07, { relleno: 'herrajeOscuro' }),
+    // Palanca inclinada
+    poligono(
+      [
+        { x: ancho * 0.22, y: yPalanca + alto * 0.04 },
+        { x: ancho * 0.8, y: yPalanca - alto * 0.03 },
+        { x: ancho * 0.8, y: yPalanca + alto * 0.06 },
+        { x: ancho * 0.22, y: yPalanca + alto * 0.13 },
+      ],
+      { relleno: 'herraje', tono: 'herrajeOscuro', grosor: GROSOR_FINO },
+    ),
+    circulo(ancho * 0.79, yPalanca + alto * 0.015, Math.max(0.08, alto * 0.045), {
+      relleno: 'herrajeClaro',
       tono: 'herrajeOscuro',
       grosor: GROSOR_FINO,
-      radio: Math.max(0.08, alto * 0.07),
     }),
   ];
 }
@@ -544,7 +690,7 @@ function seccionLamina(material: 'vidrio' | 'acrilico') {
       }),
       rect(0.25, y + espesor * 0.28, anchoCara * 0.4, espesor * 0.24, {
         relleno: 'vidrioBrillo',
-        opacidad: 0.7,
+        opacidad: 0.35,
       }),
     ];
   };
@@ -590,41 +736,53 @@ const definicionAcrilico: DefinicionPieza = {
  * transversal; las variantes comerciales por sistema se registran en
  * `DEFINICIONES_POR_SISTEMA` sin tocar estas definiciones base.
  */
-export const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
+const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
   vidrio: definicionVidrio,
   acrilico: definicionAcrilico,
   jamba: {
     etiqueta: 'Jamba',
     elevacion: (ctx) =>
-      elevacionPerfil(ctx, { canal: 'cerrado', inglete: true, garganta: true }),
+      elevacionPerfil(ctx, { canal: 'cerrado', inglete: true, garganta: true, tornillos: true }),
     seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
   },
   cabezal: {
     etiqueta: 'Cabezal',
     elevacion: (ctx) =>
-      elevacionPerfil(ctx, { canal: 'cerrado', inglete: true, garganta: true, gotero: true }),
+      elevacionPerfil(ctx, {
+        canal: 'cerrado',
+        inglete: true,
+        garganta: true,
+        gotero: true,
+        tornillos: true,
+      }),
     seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
   },
   sillar: {
     etiqueta: 'Sillar',
     elevacion: (ctx) =>
-      elevacionPerfil(ctx, { canal: 'cerrado', inglete: true, garganta: true, peldano: true }),
+      elevacionPerfil(ctx, {
+        canal: 'cerrado',
+        inglete: true,
+        garganta: true,
+        peldano: true,
+        tornillos: true,
+      }),
     seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
   },
   'canal-u': {
     etiqueta: 'Canal U',
-    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'abierto' }),
-    seccion: (ctx) => seccionPerfil(ctx, { canal: 'abierto' }),
+    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'abierto', labios: true }),
+    seccion: (ctx) => seccionPerfil(ctx, { canal: 'abierto', labios: true }),
   },
   riel: {
     etiqueta: 'Riel',
-    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', labios: true }),
+    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', labios: true, riel: true }),
     seccion: (ctx) => seccionPerfil(ctx, { canal: 'cerrado', labios: true }),
   },
   horizontal: {
     etiqueta: 'Horizontal',
-    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', garganta: true }),
-    seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
+    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', gargantaCentro: true }),
+    seccion: (ctx) => seccionPerfil(ctx, { gargantaCentro: true, canal: 'cerrado' }),
   },
   enganche: {
     etiqueta: 'Enganche',
@@ -633,7 +791,7 @@ export const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
   },
   traslape: {
     etiqueta: 'Traslape',
-    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', solape: true }),
+    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', recibidor: true }),
     seccion: (ctx) => seccionPerfil(ctx, { canal: 'cerrado' }),
   },
   tubo: {

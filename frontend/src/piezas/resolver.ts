@@ -31,7 +31,7 @@ export function parametrosDe(identidad: IdentidadPieza): ParametrosPerfil {
 }
 
 const PATRONES_DESCRIPCION: Array<[RegExp, ClasePieza]> = [
-  [/PISAVIDRIO/i, 'pisavidrio'],
+  [/PISA[\s-]*VIDRIO/i, 'pisavidrio'],
   [/FELPA/i, 'felpa'],
   [/EMPAQUE/i, 'empaque'],
   [/TRASLAPE/i, 'traslape'],

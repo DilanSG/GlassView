@@ -14,10 +14,15 @@ function centro(pieza: PiezaPlano): { x: number; y: number } {
 }
 
 /**
- * Orden de dibujo: primero los vidrios/acrílicos y encima los perfiles y
- * herrajes, porque en la realidad el perfil monta por delante de la lámina.
+ * Orden de dibujo por defecto: primero los vidrios/acrílicos y encima los
+ * perfiles y herrajes (el perfil monta por delante de la lámina). Las piezas
+ * de `ordenSeleccion` pasan al final en el orden en que se seleccionaron, de
+ * modo que la última seleccionada se dibuja encima de todo.
  */
-export function ordenarPiezasParaDibujo(piezas: PiezaPlano[]): PiezaPlano[] {
+export function ordenarPiezasParaDibujo(
+  piezas: PiezaPlano[],
+  ordenSeleccion: string[] = [],
+): PiezaPlano[] {
   const vidrios: PiezaPlano[] = [];
   const resto: PiezaPlano[] = [];
   for (const pieza of piezas) {
@@ -27,7 +32,19 @@ export function ordenarPiezasParaDibujo(piezas: PiezaPlano[]): PiezaPlano[] {
       /^(VID|ACR)/i.test(pieza.ref ?? '');
     (esLamina ? vidrios : resto).push(pieza);
   }
-  return [...vidrios, ...resto];
+
+  const base = [...vidrios, ...resto];
+  if (ordenSeleccion.length === 0) {
+    return base;
+  }
+
+  const prioridad = new Map(ordenSeleccion.map((id, indice) => [id, indice]));
+  const sinSeleccionar = base.filter((pieza) => !prioridad.has(pieza.id));
+  const seleccionadas = base
+    .filter((pieza) => prioridad.has(pieza.id))
+    .sort((a, b) => (prioridad.get(a.id) ?? 0) - (prioridad.get(b.id) ?? 0));
+
+  return [...sinSeleccionar, ...seleccionadas];
 }
 
 function distanciaCentros(a: PiezaPlano, b: PiezaPlano): number {

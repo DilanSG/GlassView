@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Group, Layer, Stage } from 'react-konva';
 import type Konva from 'konva';
 import { useZoomPan } from '../hooks/useZoomPan';
-import type { ModeloVentaneria, PerfilCategoria, PerfilVentaneria, PiezaPlano } from '../tipos';
+import type { ModeloVentaneria, PerfilCategoria, PerfilVentaneria, PiezaPlano, HuecoProyecto } from '../tipos';
 import type { HerramientaCad } from '../constantes';
 import type { EstadoGuardado, Interaccion, InteraccionMover, RectanguloNuevo } from '../tipos/lienzo';
 import { MINIMO_SELECCION_PANTALLA, PX_POR_CM, TAMANO_ASA } from '../constantes';
@@ -14,6 +14,7 @@ import { useRejilla } from '../hooks/useRejilla';
 import BarraHerramientas from '../componentes/lienzo/BarraHerramientas';
 import ControlesZoom from '../componentes/lienzo/ControlesZoom';
 import RejillaKonva from '../componentes/lienzo/RejillaKonva';
+import HuecoKonva from '../componentes/lienzo/HuecoKonva';
 import PiezasKonva from '../componentes/lienzo/PiezasKonva';
 import AsasSeleccion, { ESQUINAS_ASAS } from '../componentes/lienzo/AsasSeleccion';
 import CotasKonva from '../componentes/lienzo/CotasKonva';
@@ -26,6 +27,8 @@ interface LienzoPlanoProps {
   piezas: PiezaPlano[];
   modelos: ModeloVentaneria[];
   perfiles: PerfilVentaneria[];
+  /** Medidas del hueco de obra; null/ausente = mapa libre. */
+  hueco?: HuecoProyecto | null;
   piezaSeleccionadaId: string | null;
   onSeleccionarPieza: (id: string | null) => void;
   /** Actualiza las piezas en el editor al instante (sin guardar). */
@@ -64,6 +67,7 @@ export default function LienzoPlano({
   piezas,
   modelos,
   perfiles,
+  hueco,
   piezaSeleccionadaId,
   onSeleccionarPieza,
   onCambiarPiezas,
@@ -79,6 +83,7 @@ export default function LienzoPlano({
   const [herramienta, setHerramienta] = useState<string>('seleccion');
   const [barraExpandida, setBarraExpandida] = useState(false);
   const [presetsAbierto, setPresetsAbierto] = useState(false);
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [rectPreview, setRectPreview] = useState<RectanguloNuevo | null>(null);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [piezaPendiente, setPiezaPendiente] = useState<{
@@ -93,8 +98,8 @@ export default function LienzoPlano({
   const [anchoPreset, setAnchoPreset] = useState('120');
   const [altoPreset, setAltoPreset] = useState('120');
   const [insertandoPreset, setInsertandoPreset] = useState(false);
-  const [medidorAbierto, setMedidorAbierto] = useState(false);
   const [idsSeleccionadas, setIdsSeleccionadas] = useState<string[]>([]);
+  const [ordenSeleccion, setOrdenSeleccion] = useState<string[]>([]);
 
   const {
     vista,
@@ -127,6 +132,10 @@ export default function LienzoPlano({
   const { rangoMundo, lineasRejilla } = useRejilla(piezas, vista, tamanoVista);
 
   const piezaSeleccionada = piezas.find((p) => p.id === piezaSeleccionadaId) ?? null;
+  // La ficha de la pieza (tipo, REF, medidas y sección) se muestra siempre que
+  // haya una única pieza seleccionada con la herramienta de selección.
+  const mostrarMedidor =
+    Boolean(piezaSeleccionada) && herramienta === 'seleccion' && idsSeleccionadas.length === 0;
 
   useEffect(() => {
     // En modo de solo vista la única herramienta es la mano; al volver a
@@ -138,6 +147,63 @@ export default function LienzoPlano({
     const idsValidos = new Set(piezas.map((p) => p.id));
     setIdsSeleccionadas((anterior) => anterior.filter((id) => idsValidos.has(id)));
   }, [piezas]);
+
+  useEffect(() => {
+    // La última pieza seleccionada se dibuja encima (y también se detecta
+    // primero en el clic, porque el hit-test recorre el orden inverso).
+    const seleccionados = [
+      ...idsSeleccionadas,
+      ...(piezaSeleccionadaId ? [piezaSeleccionadaId] : []),
+    ];
+    if (seleccionados.length === 0) return;
+    setOrdenSeleccion((actual) => {
+      const restantes = actual.filter((id) => !seleccionados.includes(id));
+      return [...restantes, ...seleccionados];
+    });
+  }, [piezaSeleccionadaId, idsSeleccionadas]);
+
+  const piezasDibujo = useMemo(
+    () => ordenarPiezasParaDibujo(piezas, ordenSeleccion),
+    [piezas, ordenSeleccion],
+  );
+
+  const limitesHueco =
+    hueco && hueco.anchoCm > 0 && hueco.altoCm > 0
+      ? { ancho: hueco.anchoCm, alto: hueco.altoCm }
+      : null;
+
+  /** Mantiene un punto (en píxeles) dentro del hueco (si existe). */
+  function limitarPunto(punto: { x: number; y: number }): { x: number; y: number } {
+    if (!limitesHueco) return punto;
+    const anchoPx = limitesHueco.ancho * PX_POR_CM;
+    const altoPx = limitesHueco.alto * PX_POR_CM;
+    return {
+      x: Math.min(Math.max(0, punto.x), anchoPx),
+      y: Math.min(Math.max(0, punto.y), altoPx),
+    };
+  }
+
+  /** Recorta el rectángulo de dibujo (en píxeles) al hueco; null si no queda área. */
+  function limitarRect(rect: RectanguloNuevo): RectanguloNuevo | null {
+    if (!limitesHueco) return rect;
+    const anchoPx = limitesHueco.ancho * PX_POR_CM;
+    const altoPx = limitesHueco.alto * PX_POR_CM;
+    const x = Math.min(Math.max(0, rect.x), anchoPx);
+    const y = Math.min(Math.max(0, rect.y), altoPx);
+    const ancho = Math.min(rect.ancho, anchoPx - x);
+    const alto = Math.min(rect.alto, altoPx - y);
+    if (ancho <= 0 || alto <= 0) return null;
+    return { x, y, ancho, alto };
+  }
+
+  /** Posición válida de una pieza dentro del hueco. */
+  function limitarPosicionPieza(x: number, y: number, pieza: PiezaPlano): { x: number; y: number } {
+    if (!limitesHueco) return { x, y };
+    return {
+      x: Math.min(Math.max(0, x), Math.max(0, limitesHueco.ancho - pieza.anchoCm)),
+      y: Math.min(Math.max(0, y), Math.max(0, limitesHueco.alto - pieza.altoCm)),
+    };
+  }
 
   /** Rango en píxeles que ocupan las piezas (para encuadrar la vista). */
   function rangoPiezas(): { x: number; y: number; ancho: number; alto: number } | null {
@@ -154,18 +220,32 @@ export default function LienzoPlano({
     };
   }
 
-  function encuadrarPiezas(): void {
-    encuadrar(rangoPiezas());
+  /** Rango en píxeles que se encuadra: el hueco si existe, si no las piezas. */
+  function rangoInicial(): { x: number; y: number; ancho: number; alto: number } | null {
+    if (hueco && hueco.anchoCm > 0 && hueco.altoCm > 0) {
+      return {
+        x: 0,
+        y: 0,
+        ancho: hueco.anchoCm * PX_POR_CM,
+        alto: hueco.altoCm * PX_POR_CM,
+      };
+    }
+    return rangoPiezas();
+  }
+
+  function encuadrarVista(): void {
+    encuadrar(rangoInicial());
   }
 
   useEffect(() => {
-    // Al abrir un plano con contenido se encuadra una sola vez para aprovechar
-    // toda la pantalla; después el usuario controla el zoom y el desplazamiento.
-    if (encuadradoRef.current || piezas.length === 0 || !tamanoMedido) return;
-    if (tamanoVista.ancho <= 0 || tamanoVista.alto <= 0) return;
-    encuadrar(rangoPiezas());
+    // Al abrir un plano se encuadra una sola vez (el hueco o el contenido)
+    // para aprovechar toda la pantalla; después manda el zoom del usuario.
+    if (encuadradoRef.current || !tamanoMedido) return;
+    const rango = rangoInicial();
+    if (!rango) return;
+    encuadrar(rango);
     encuadradoRef.current = true;
-  }, [piezas, tamanoVista, tamanoMedido, encuadrar]);
+  }, [piezas, hueco, tamanoVista, tamanoMedido, encuadrar]);
 
   const resultados = useMemo(() => {
     if (!piezaPendiente) return [];
@@ -252,7 +332,6 @@ export default function LienzoPlano({
     }
 
     const minimoSel = MINIMO_SELECCION_PANTALLA / vista.zoom;
-    const piezasDibujo = ordenarPiezasParaDibujo(piezas);
     for (let i = piezasDibujo.length - 1; i >= 0; i--) {
       const pieza = piezasDibujo[i];
       const anchoPx = Math.max(0, pieza.anchoCm) * PX_POR_CM;
@@ -342,7 +421,6 @@ export default function LienzoPlano({
       const pieza = piezas.find((p) => p.id === idPieza);
       if (!pieza) return;
       setHerramienta('seleccion');
-      setMedidorAbierto(false);
       setIdsSeleccionadas([]);
       const movimiento = crearInteraccionMover(idPieza, [idPieza], punto);
       if (!movimiento) return;
@@ -357,14 +435,12 @@ export default function LienzoPlano({
 
       if (idPieza && abrirMedidor) {
         onSeleccionarPieza(idPieza);
-        setMedidorAbierto(true);
         return;
       }
 
       if (idPieza && esquina) {
         const pieza = piezas.find((p) => p.id === idPieza);
         if (!pieza) return;
-        setMedidorAbierto(false);
         interaccionRef.current = {
           tipo: 'redimensionar',
           idPieza,
@@ -379,7 +455,6 @@ export default function LienzoPlano({
         const pieza = piezas.find((p) => p.id === idPieza);
         if (!pieza) return;
         if (idsSeleccionadas.length > 0 && idsSeleccionadas.includes(idPieza)) {
-          setMedidorAbierto(false);
           const movimiento = crearInteraccionMover(idPieza, idsSeleccionadas, punto);
           if (!movimiento) return;
           interaccionRef.current = movimiento;
@@ -391,9 +466,7 @@ export default function LienzoPlano({
         interaccionRef.current = movimiento;
         onSeleccionarPieza(idPieza);
         setIdsSeleccionadas([]);
-        setMedidorAbierto(false);
       } else {
-        setMedidorAbierto(false);
         inicioRef.current = { x: punto.x, y: punto.y };
         setRectPreview({ x: punto.x, y: punto.y, ancho: 0, alto: 0 });
       }
@@ -401,17 +474,19 @@ export default function LienzoPlano({
     }
 
     // Las plantillas no se dimensionan arrastrando: un clic abre el diálogo
-    // con las medidas reales de la ventana.
+    // con las medidas reales de la ventana (o del hueco si el plano lo tiene).
     if (herramienta.startsWith('preset-')) {
+      const puntoDentro = limitarPunto(punto);
       clicPresetRef.current = {
-        x: Math.round(punto.x / PX_POR_CM),
-        y: Math.round(punto.y / PX_POR_CM),
+        x: Math.round(puntoDentro.x / PX_POR_CM),
+        y: Math.round(puntoDentro.y / PX_POR_CM),
       };
       return;
     }
 
-    const x = redondearAPx(punto.x, PX_POR_CM);
-    const y = redondearAPx(punto.y, PX_POR_CM);
+    const puntoDentro = limitarPunto(punto);
+    const x = redondearAPx(puntoDentro.x, PX_POR_CM);
+    const y = redondearAPx(puntoDentro.y, PX_POR_CM);
     inicioRef.current = { x, y };
     setRectPreview({ x, y, ancho: 0, alto: 0 });
   }
@@ -425,12 +500,13 @@ export default function LienzoPlano({
 
     if (rectPreview && inicioRef.current) {
       const origen = inicioRef.current;
-      setRectPreview({
+      const candidato: RectanguloNuevo = {
         x: Math.min(origen.x, punto.x),
         y: Math.min(origen.y, punto.y),
         ancho: Math.abs(redondearAPx(punto.x, PX_POR_CM) - origen.x),
         alto: Math.abs(redondearAPx(punto.y, PX_POR_CM) - origen.y),
-      });
+      };
+      setRectPreview(limitarRect(candidato));
       return;
     }
 
@@ -448,11 +524,12 @@ export default function LienzoPlano({
         piezas.map((p) => {
           if (!interaccion.ids.includes(p.id)) return p;
           const origen = interaccion.origenPiezas[p.id] ?? { x: p.x, y: p.y };
-          return {
-            ...p,
-            x: redondearCm(Math.max(0, origen.x + dx)),
-            y: redondearCm(Math.max(0, origen.y + dy)),
-          };
+          const posicion = limitarPosicionPieza(
+            redondearCm(Math.max(0, origen.x + dx)),
+            redondearCm(Math.max(0, origen.y + dy)),
+            p,
+          );
+          return { ...p, ...posicion };
         }),
       );
       return;
@@ -479,6 +556,8 @@ export default function LienzoPlano({
     const cambiaAncho = izquierda || derecha;
     const cambiaAlto = superior || inferior;
 
+    // Al tirar de un asa se ancla el borde opuesto: por eso al redimensionar
+    // desde la izquierda o arriba se recalcula también la posición.
     if (cambiaAncho) {
       if (izquierda) {
         nuevoAncho = Math.max(2, anchoPx + x0 - xPx) / PX_POR_CM;
@@ -494,6 +573,26 @@ export default function LienzoPlano({
       } else {
         nuevoAlto = Math.max(2, yPx - y0) / PX_POR_CM;
       }
+    }
+
+    // Con hueco, el redimensionado no puede salirse del vano.
+    if (limitesHueco) {
+      if (nuevoX < 0) {
+        nuevoAncho += nuevoX;
+        nuevoX = 0;
+      }
+      if (nuevoY < 0) {
+        nuevoAlto += nuevoY;
+        nuevoY = 0;
+      }
+      if (nuevoX + nuevoAncho > limitesHueco.ancho) {
+        nuevoAncho = limitesHueco.ancho - nuevoX;
+      }
+      if (nuevoY + nuevoAlto > limitesHueco.alto) {
+        nuevoAlto = limitesHueco.alto - nuevoY;
+      }
+      nuevoAncho = Math.max(0.2, nuevoAncho);
+      nuevoAlto = Math.max(0.2, nuevoAlto);
     }
 
     onCambiarPiezas(
@@ -529,8 +628,12 @@ export default function LienzoPlano({
       if (!punto) return;
       const modeloId = herramienta.slice('preset-'.length);
       const modelo = modelos.find((item) => item.id === modeloId);
-      setAnchoPreset(modelo ? String(modelo.ejemplo.ancho) : '120');
-      setAltoPreset(modelo ? String(modelo.ejemplo.alto) : '120');
+      setAnchoPreset(
+        limitesHueco ? String(limitesHueco.ancho) : modelo ? String(modelo.ejemplo.ancho) : '120',
+      );
+      setAltoPreset(
+        limitesHueco ? String(limitesHueco.alto) : modelo ? String(modelo.ejemplo.alto) : '120',
+      );
       setPresetPendiente({ modeloId, xCm: punto.x, yCm: punto.y });
       return;
     }
@@ -542,7 +645,6 @@ export default function LienzoPlano({
       if (rect.ancho < PX_POR_CM || rect.alto < PX_POR_CM) {
         onSeleccionarPieza(null);
         setIdsSeleccionadas([]);
-        setMedidorAbierto(false);
         return;
       }
 
@@ -567,7 +669,6 @@ export default function LienzoPlano({
           setIdsSeleccionadas([]);
           onSeleccionarPieza(null);
         }
-        setMedidorAbierto(false);
         return;
       }
 
@@ -653,6 +754,7 @@ export default function LienzoPlano({
           herramienta={herramienta}
           barraExpandida={barraExpandida}
           presetsAbierto={presetsAbierto}
+          ayudaAbierta={ayudaAbierta}
           modelos={modelos}
           onCambiarHerramienta={setHerramienta}
           onAlternarBarra={() => setBarraExpandida((antes) => !antes)}
@@ -660,6 +762,7 @@ export default function LienzoPlano({
             setPresetsAbierto((antes) => !antes);
             setBarraExpandida(true);
           }}
+          onAlternarAyuda={() => setAyudaAbierta((abierta) => !abierta)}
         />
       )}
 
@@ -668,7 +771,7 @@ export default function LienzoPlano({
           aplicarZoom={aplicarZoom}
           enPantallaCompleta={enPantallaCompleta}
           onAbrirPantallaCompleta={onAbrirPantallaCompleta}
-          onEncuadrar={encuadrarPiezas}
+          onEncuadrar={encuadrarVista}
         />
         <Stage
           ref={etapaRef}
@@ -697,8 +800,17 @@ export default function LienzoPlano({
                 colorEtiqueta={colorEtiqueta}
               />
 
+              {hueco && hueco.anchoCm > 0 && hueco.altoCm > 0 && (
+                <HuecoKonva
+                  anchoCm={hueco.anchoCm}
+                  altoCm={hueco.altoCm}
+                  colorEtiqueta={colorEtiqueta}
+                  colorFondo={colorFondo}
+                />
+              )}
+
               <PiezasKonva
-                piezas={piezas}
+                piezas={piezasDibujo}
                 perfiles={perfiles}
                 paleta={paleta}
                 piezaSeleccionadaId={piezaSeleccionadaId}
@@ -729,20 +841,27 @@ export default function LienzoPlano({
           </Layer>
         </Stage>
 
-        {piezaSeleccionada && medidorAbierto && (
-          <MedidorPieza
-            pieza={piezaSeleccionada}
-            perfiles={perfiles}
-            vista={vista}
-            onSeleccionarPieza={onSeleccionarPieza}
-            onMedir={(cambios) => {
-              onCambiarPiezas(
-                piezas.map((p) => (p.id === piezaSeleccionada.id ? { ...p, ...cambios } : p)),
-              );
-              onGuardarCambios();
-            }}
-            onCerrar={() => setMedidorAbierto(false)}
-          />
+        {((!modoVista && ayudaAbierta) || (mostrarMedidor && piezaSeleccionada)) && (
+          <div className="panel-flotante-lienzo">
+            {!modoVista && (
+              <AyudaLienzo abierta={ayudaAbierta} onCerrar={() => setAyudaAbierta(false)} />
+            )}
+
+            {mostrarMedidor && piezaSeleccionada && (
+              <MedidorPieza
+                pieza={piezaSeleccionada}
+                perfiles={perfiles}
+                onSeleccionarPieza={onSeleccionarPieza}
+                onMedir={(cambios) => {
+                  onCambiarPiezas(
+                    piezas.map((p) => (p.id === piezaSeleccionada.id ? { ...p, ...cambios } : p)),
+                  );
+                  onGuardarCambios();
+                }}
+                onCerrar={() => onSeleccionarPieza(null)}
+              />
+            )}
+          </div>
         )}
 
         {!modoVista && estadoGuardado && onGuardar && (
@@ -759,8 +878,6 @@ export default function LienzoPlano({
           </div>
         )}
       </div>
-
-      {!modoVista && <AyudaLienzo />}
 
       {piezaPendiente && (
         <SelectorRef

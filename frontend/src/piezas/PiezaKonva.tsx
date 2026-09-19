@@ -5,9 +5,9 @@ import { PX_POR_CM } from '../constantes';
 import type { PiezaPlano } from '../tipos';
 import type { PaletaPiezas } from '../utils/colores';
 import type { ContextoPiezaResuelto } from './contexto';
-import { definicionDe } from './definiciones';
+import { construirElevacion } from './elevacion';
 import { dibujarPrimitivas, recortarRectangulo, rellenarRectangulo, type ContextoDibujo } from './primitivas';
-import type { ContextoElevacion, OrientacionPiezaDibujo, Primitiva } from './tipos';
+import type { Primitiva } from './tipos';
 
 export interface PiezaKonvaProps {
   pieza: PiezaPlano;
@@ -34,21 +34,10 @@ export default function PiezaKonva({
   seleccionada,
   colorAcento,
 }: PiezaKonvaProps): JSX.Element {
-  const primitivas = useMemo<Primitiva[]>(() => {
-    const orientacion: OrientacionPiezaDibujo =
-      pieza.orientacion === 'vertical' ? 'vertical' : 'horizontal';
-    const esHorizontal = pieza.orientacion === 'horizontal';
-    const contextoElevacion: ContextoElevacion = {
-      pieza,
-      largo: esHorizontal ? pieza.anchoCm : pieza.altoCm,
-      peralte: esHorizontal ? pieza.altoCm : pieza.anchoCm,
-      orientacion,
-      interior: contexto.interior,
-      params: contexto.params,
-      identidad: contexto.identidad,
-    };
-    return definicionDe(contexto.identidad).elevacion(contextoElevacion);
-  }, [pieza, contexto]);
+  const primitivas = useMemo<Primitiva[]>(
+    () => construirElevacion(pieza, contexto),
+    [pieza, contexto],
+  );
 
   const ancho = pieza.anchoCm;
   const alto = pieza.altoCm;

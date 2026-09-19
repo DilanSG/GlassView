@@ -73,10 +73,12 @@ export interface ModeloVentaneria {
   accesorios: AccesorioModelo[];
 }
 
+/** Atajos para declarar fórmulas: a = ancho, h = alto, f = medida fija. */
 export const a = (resta = 0, divisor = 1): FormulaMedida => ({ base: 'ancho', resta, divisor });
 export const h = (resta = 0, divisor = 1): FormulaMedida => ({ base: 'alto', resta, divisor });
 export const f = (valor: number): FormulaMedida => ({ base: 'fija', resta: valor, divisor: 1 });
 
+/** p = pieza de perfil; v = vidrio o acrílico. */
 export function p(
   ref: string,
   descripcion: string,

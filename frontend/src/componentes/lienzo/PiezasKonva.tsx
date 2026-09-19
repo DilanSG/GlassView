@@ -4,7 +4,7 @@ import type { PerfilVentaneria, PiezaPlano } from '../../tipos';
 import { PX_POR_CM } from '../../constantes';
 import type { PaletaPiezas } from '../../utils/colores';
 import { radioSeguro } from '../../utils/geometria';
-import { crearContextosPiezas, ordenarPiezasParaDibujo } from '../../piezas/contexto';
+import { crearContextosPiezas } from '../../piezas/contexto';
 import PiezaKonva from '../../piezas/PiezaKonva';
 
 export interface PiezasKonvaProps {
@@ -20,10 +20,11 @@ export interface PiezasKonvaProps {
 
 /**
  * Capa principal del lienzo: cada pieza se dibuja con su geometría real
- * (perfiles, vidrios y herrajes), más el marco punteado de la pieza
- * seleccionada y el rectángulo de vista previa al arrastrar (dibujar o
- * selección múltiple). Todo es puramente visual (listening=false): la
- * detección de clic/arrastre se hace manualmente en LienzoPlano.
+ * (perfiles, vidrios y herrajes) en el orden recibido (ya resuelto por
+ * LienzoPlano, con la última pieza seleccionada encima), más el marco
+ * punteado de la pieza seleccionada y el rectángulo de vista previa al
+ * arrastrar (dibujar o selección múltiple). Todo es puramente visual
+ * (listening=false): la detección de clic/arrastre se hace en LienzoPlano.
  */
 export default function PiezasKonva({
   piezas,
@@ -62,7 +63,7 @@ export default function PiezasKonva({
         );
       })()}
 
-      {ordenarPiezasParaDibujo(piezas).map((pieza) => {
+      {piezas.map((pieza) => {
         const contexto = contextos.get(pieza.id);
         if (!contexto) return null;
         return (

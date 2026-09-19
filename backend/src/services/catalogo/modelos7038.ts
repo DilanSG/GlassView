@@ -1,7 +1,6 @@
-import { a, h, f, p, v } from './tipos.js';
+import { a, h, p, v } from './tipos.js';
 import type { ModeloVentaneria } from './tipos.js';
 
-/** Modelos de la familia 7038. */
 export const modelos7038: ModeloVentaneria[] = [
   {
     id: '7038-2-hojas',

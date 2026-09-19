@@ -14,7 +14,6 @@ import {
   obtenerModeloVentaneria,
   type ModeloVentaneria,
   type PiezaDespiece,
-  type FormulaMedida,
 } from './catalogoVentaneria.js';
 import { obtenerPerfilPorRef } from './perfilesVentaneria.js';
 

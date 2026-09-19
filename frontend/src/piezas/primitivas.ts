@@ -29,6 +29,8 @@ export function rect(
   alto: number,
   opciones: OpcionesTrazo & { radio?: number; relleno?: TonoPieza } = {},
 ): Primitiva {
+  // La geometría de los perfiles calcula las esquinas en cualquier orden, así
+  // que aquí se normaliza a origen + tamaño absoluto.
   const anchoNormalizado = Math.abs(ancho);
   const altoNormalizado = Math.abs(alto);
   return {
@@ -174,7 +176,6 @@ function trazarRectanguloRedondeado(
   ctx.closePath();
 }
 
-/** Recorta el dibujo al rectángulo redondeado indicado. */
 export function recortarRectangulo(
   ctx: ContextoDibujo,
   x: number,

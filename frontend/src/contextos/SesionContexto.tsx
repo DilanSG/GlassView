@@ -29,6 +29,8 @@ const SesionContexto = createContext<ValorSesion | null>(null);
 
 export function SesionProveedor({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  // Solo se arranca en estado de carga si hay un token guardado: así las
+  // páginas públicas no parpadean con un «Cargando sesión…» innecesario.
   const [cargando, setCargando] = useState(() => haySesionActiva());
   const navegar = useNavigate();
 
@@ -43,6 +45,8 @@ export function SesionProveedor({ children }: { children: ReactNode }) {
     try {
       setUsuario(await obtenerPerfil());
     } catch {
+      // El token existe localmente pero el backend ya no lo acepta
+      // (sesión revocada o cuenta eliminada): se limpia.
       eliminarToken();
       setUsuario(null);
     } finally {

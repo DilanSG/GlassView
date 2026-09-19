@@ -114,7 +114,6 @@ export default function Inicio() {
             <ul className="hero-puntos">
               <li>Prueba de {diasPrueba} días</li>
               <li>Sin tarjeta</li>
-              <li>Escala real</li>
             </ul>
           </div>
 

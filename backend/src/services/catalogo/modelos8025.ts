@@ -1,7 +1,6 @@
-import { a, h, f, p, v } from './tipos.js';
+import { a, h, p, v } from './tipos.js';
 import type { ModeloVentaneria } from './tipos.js';
 
-/** Modelos de la familia 8025. */
 export const modelos8025: ModeloVentaneria[] = [
   {
     id: '8025-2-hojas',

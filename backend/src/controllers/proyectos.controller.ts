@@ -7,6 +7,22 @@ import { Proyecto } from '../models/Proyecto.js';
  * otro usuario (ni el administrador) puede verlos o modificarlos.
  */
 
+/** Valida y normaliza las medidas del hueco (null = mapa libre). */
+function normalizarHueco(valor: unknown): { anchoCm: number; altoCm: number } | undefined {
+  if (!valor || typeof valor !== 'object') {
+    return undefined;
+  }
+  const anchoCm = Number((valor as { anchoCm?: unknown }).anchoCm);
+  const altoCm = Number((valor as { altoCm?: unknown }).altoCm);
+  if (!Number.isFinite(anchoCm) || !Number.isFinite(altoCm) || anchoCm <= 0 || altoCm <= 0) {
+    return undefined;
+  }
+  return {
+    anchoCm: Math.round(anchoCm * 10) / 10,
+    altoCm: Math.round(altoCm * 10) / 10,
+  };
+}
+
 export async function obtenerProyectos(req: Request, res: Response): Promise<void> {
   try {
     const proyectos = await Proyecto.find({ usuario: req.usuario!._id }).sort({
@@ -41,12 +57,13 @@ export async function obtenerProyecto(req: Request, res: Response): Promise<void
 
 export async function crearProyecto(req: Request, res: Response): Promise<void> {
   try {
-    const { nombre, cliente, direccion, piezas } = req.body ?? {};
+    const { nombre, cliente, direccion, piezas, hueco } = req.body ?? {};
     const proyecto = new Proyecto({
       usuario: req.usuario!._id,
       nombre,
       cliente,
       direccion,
+      hueco: normalizarHueco(hueco),
       piezas,
     });
     await proyecto.save();
@@ -63,8 +80,14 @@ export async function actualizarProyecto(req: Request, res: Response): Promise<v
   }
 
   try {
-    const { nombre, cliente, direccion, piezas } = req.body ?? {};
-    const cambios = { nombre, cliente, direccion, piezas };
+    const { nombre, cliente, direccion, piezas, hueco } = req.body ?? {};
+    const cambios: Record<string, unknown> = { nombre, cliente, direccion, piezas };
+    // `hueco: null` limpia el hueco (mapa libre); si viene, se normaliza.
+    if (hueco === null) {
+      cambios.hueco = null;
+    } else if (hueco !== undefined) {
+      cambios.hueco = normalizarHueco(hueco);
+    }
 
     const proyecto = await Proyecto.findOneAndUpdate(
       { _id: req.params.id, usuario: req.usuario!._id },

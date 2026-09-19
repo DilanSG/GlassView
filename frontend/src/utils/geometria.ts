@@ -20,7 +20,6 @@ export function valorCm(texto: string): number | null {
   return Math.max(0.1, Math.round(numero * 10) / 10);
 }
 
-/** Redondea un número en cm a 1 decimal y lo devuelve como numérico. */
 export function redondearCm(valor: number): number {
   return Math.round(valor * 10) / 10;
 }

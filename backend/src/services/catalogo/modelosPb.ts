@@ -1,7 +1,6 @@
 import { a, h, f, p, v } from './tipos.js';
 import type { ModeloVentaneria } from './tipos.js';
 
-/** Modelos de la familia Pb. */
 export const modelosPb: ModeloVentaneria[] = [
   {
     id: 'pb-tubular-1x1.2',

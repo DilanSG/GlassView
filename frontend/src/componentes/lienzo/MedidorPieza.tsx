@@ -1,31 +1,34 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo } from 'react';
 import type { PerfilVentaneria, PiezaPlano } from '../../tipos';
 import { valorCm } from '../../utils/geometria';
-import { PX_POR_CM } from '../../constantes';
-import type { VistaPlano } from '../../hooks/useZoomPan';
 import { crearContextosPiezas } from '../../piezas/contexto';
 import { ETIQUETA_CLASE } from '../../piezas/resolver';
-import SeccionPieza from '../../piezas/SeccionPieza';
 
 export interface MedidorPiezaProps {
   pieza: PiezaPlano;
   perfiles: PerfilVentaneria[];
-  vista: VistaPlano;
   onSeleccionarPieza: (id: string | null) => void;
   onMedir: (cambios: Partial<PiezaPlano>) => void;
   onCerrar: () => void;
 }
 
-/** Panel flotante con los campos de medida y la sección de la pieza. */
+function milimetros(valorCm: number): string {
+  return `${(valorCm * 10).toFixed(1)} mm`;
+}
+
+/**
+ * Ficha de la pieza seleccionada, anclada a la esquina inferior izquierda del
+ * lienzo: tipo, referencia, medidas editables, especificaciones del perfil y
+ * su sección transversal.
+ */
 export default function MedidorPieza({
   pieza,
   perfiles,
-  vista,
   onSeleccionarPieza,
   onMedir,
   onCerrar,
 }: MedidorPiezaProps): JSX.Element {
-  const { orientacion, tipo, anchoCm, altoCm } = pieza;
+  const { orientacion, tipo, anchoCm, altoCm, cantidad, espesorMm, ref, descripcion } = pieza;
   const esPunto = orientacion === 'punto';
   const esVidrio = tipo === 'vidrio' || tipo === 'acrilico';
 
@@ -61,6 +64,10 @@ export default function MedidorPieza({
     if (valor !== null) onMedir({ altoCm: valor });
   };
 
+  const largo = orientacion === 'horizontal' ? anchoCm : altoCm;
+  const grosor = orientacion === 'horizontal' ? altoCm : anchoCm;
+  const etiquetaClase = contexto ? ETIQUETA_CLASE[contexto.identidad.clase] : tipo;
+
   const campos = (): JSX.Element => {
     if (esPunto) {
       return <p className="medidor-tipo">Pieza puntual: solo posición y cantidad.</p>;
@@ -95,8 +102,6 @@ export default function MedidorPieza({
         </div>
       );
     }
-    const largoActual = orientacion === 'horizontal' ? anchoCm : altoCm;
-    const grosorActual = orientacion === 'horizontal' ? altoCm : anchoCm;
     return (
       <div className="medidor-campos">
         <label className="medidor-campo">
@@ -106,7 +111,7 @@ export default function MedidorPieza({
             type="number"
             min="0.1"
             step="0.1"
-            defaultValue={largoActual}
+            defaultValue={largo}
             onChange={(evento) => aplicarLargo(evento.target.value)}
           />
           cm
@@ -118,7 +123,7 @@ export default function MedidorPieza({
             type="number"
             min="0.1"
             step="0.1"
-            defaultValue={grosorActual}
+            defaultValue={grosor}
             onChange={(evento) => aplicarGrosor(evento.target.value)}
           />
           cm
@@ -128,23 +133,10 @@ export default function MedidorPieza({
   };
 
   return (
-    <div
-      className="medidor-pieza"
-      style={
-        {
-          '--x': `${Math.max(
-            0,
-            vista.x + (pieza.x + pieza.anchoCm) * PX_POR_CM * vista.zoom,
-          )}px`,
-          '--y': `${Math.max(0, vista.y + pieza.y * PX_POR_CM * vista.zoom)}px`,
-        } as CSSProperties
-      }
-    >
+    <div className="medidor-pieza">
       <div className="medidor-cabecera">
-        <span className="medidor-nombre">
-          {pieza.descripcion || pieza.ref || pieza.tipo}
-        </span>
-        {pieza.ref && <span className="medidor-ref">{pieza.ref}</span>}
+        <span className="medidor-nombre">{etiquetaClase}</span>
+        {ref && <span className="medidor-ref">{ref}</span>}
         <button
           type="button"
           className="medidor-cerrar"
@@ -157,23 +149,49 @@ export default function MedidorPieza({
           ×
         </button>
       </div>
+
       {campos()}
-      {contexto && (
-        <div className="medidor-seccion">
-          <SeccionPieza
-            identidad={contexto.identidad}
-            params={contexto.params}
-            interior={contexto.interior}
-            pieza={pieza}
-            ancho={88}
-            alto={64}
-          />
-          <span className="medidor-seccion-etiqueta">
-            {ETIQUETA_CLASE[contexto.identidad.clase]}
-            {contexto.identidad.sistema ? ` · ${contexto.identidad.sistema}` : ''}
-          </span>
+
+      <dl className="medidor-especificaciones">
+        <div>
+          <dt>Tipo</dt>
+          <dd>{etiquetaClase}</dd>
         </div>
-      )}
+        {contexto?.identidad.sistema && (
+          <div>
+            <dt>Sistema</dt>
+            <dd>{contexto.identidad.sistema}</dd>
+          </div>
+        )}
+        {descripcion && (
+          <div>
+            <dt>Descripción</dt>
+            <dd>{descripcion}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Medidas</dt>
+          <dd>{esPunto ? 'Puntual' : `${largo} × ${grosor} cm`}</dd>
+        </div>
+        {esVidrio && (
+          <div>
+            <dt>Espesor</dt>
+            <dd>{espesorMm} mm</dd>
+          </div>
+        )}
+        {!esVidrio && !esPunto && contexto && (
+          <div>
+            <dt>Perfil</dt>
+            <dd>
+              pared {milimetros(contexto.params.pared)} · garganta {milimetros(contexto.params.garganta)}
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>Cantidad</dt>
+          <dd>{cantidad}</dd>
+        </div>
+      </dl>
     </div>
   );
 }

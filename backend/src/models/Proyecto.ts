@@ -2,6 +2,18 @@ import { model, Schema, type InferSchemaType } from 'mongoose';
 import esquemaPieza from './Pieza.js';
 
 /**
+ * Hueco de obra: medidas reales del vano donde se instala la cristalería.
+ * Cuando existe, el lienzo del editor se dimensiona a este tamaño.
+ */
+const esquemaHueco = new Schema(
+  {
+    anchoCm: { type: Number, required: true, min: 1 },
+    altoCm: { type: Number, required: true, min: 1 },
+  },
+  { _id: false },
+);
+
+/**
  * Proyecto: plano de instalación compuesto por piezas dibujadas
  * (perfiles, vidrios y herrajes).
  */
@@ -11,6 +23,8 @@ const esquemaProyecto = new Schema(
     nombre: { type: String, required: true, trim: true },
     cliente: { type: String, trim: true },
     direccion: { type: String, trim: true },
+    /** Medidas del hueco; ausente o null = mapa libre (lienzo infinito). */
+    hueco: { type: esquemaHueco, default: undefined },
     fechaCreacion: { type: Date, default: Date.now },
     piezas: { type: [esquemaPieza], default: [] },
   },

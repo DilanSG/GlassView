@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { eliminarProyecto, obtenerProyectos } from '../api/clienteApi';
-import type { PiezaPlano, Proyecto } from '../tipos';
+import {
+  eliminarProyecto,
+  obtenerPerfilesVentaneria,
+  obtenerProyectos,
+} from '../api/clienteApi';
+import MiniaturaPlano from '../piezas/MiniaturaPlano';
+import type { PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
 
 function formatearFecha(fecha: string): string {
   return new Date(fecha).toLocaleDateString('es-ES', {
@@ -55,96 +60,9 @@ function calcularResumen(piezas: PiezaPlano[]): ResumenProyecto {
   };
 }
 
-function MiniaturaPlano({ piezas }: { piezas: PiezaPlano[] }) {
-  if (piezas.length === 0) {
-    return (
-      <div className="miniatura-plano">
-        <span className="miniatura-plano-vacio">Sin piezas aún</span>
-      </div>
-    );
-  }
-
-  const margen = 24;
-  const extremos = (pieza: PiezaPlano) =>
-    esPiezaVidrio(pieza)
-      ? {
-          x0: pieza.x,
-          y0: pieza.y,
-          x1: pieza.x + (pieza.anchoCm || pieza.largoCm),
-          y1: pieza.y + (pieza.altoCm || pieza.largoCm),
-        }
-      : pieza.orientacion === 'vertical'
-        ? { x0: pieza.x, y0: pieza.y, x1: pieza.x, y1: pieza.y + (pieza.largoCm || pieza.altoCm) }
-        : pieza.orientacion === 'punto'
-          ? { x0: pieza.x - 3, y0: pieza.y - 3, x1: pieza.x + 3, y1: pieza.y + 3 }
-          : { x0: pieza.x, y0: pieza.y, x1: pieza.x + (pieza.largoCm || pieza.anchoCm), y1: pieza.y };
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  for (const pieza of piezas) {
-    const { x0, y0, x1, y1 } = extremos(pieza);
-    minX = Math.min(minX, x0);
-    minY = Math.min(minY, y0);
-    maxX = Math.max(maxX, x1);
-    maxY = Math.max(maxY, y1);
-  }
-
-  const ancho = maxX - minX;
-  const alto = maxY - minY;
-  const grosorLinea = Math.max(2.5, Math.min(ancho, alto) / 50);
-
-  return (
-    <div className="miniatura-plano">
-      <svg
-        viewBox={`${minX - margen} ${minY - margen} ${ancho + margen * 2} ${alto + margen * 2}`}
-        preserveAspectRatio="xMidYMid meet"
-        aria-hidden="true"
-      >
-        {piezas.map((pieza) => {
-          const { x0, y0, x1, y1 } = extremos(pieza);
-
-          if (esPiezaVidrio(pieza)) {
-            return (
-              <rect
-                key={pieza.id}
-                x={x0}
-                y={y0}
-                width={Math.max(x1 - x0, 2)}
-                height={Math.max(y1 - y0, 2)}
-                rx={Math.min(ancho, alto) / 28}
-                className="miniatura-vidrio"
-              />
-            );
-          }
-
-          if (pieza.orientacion === 'punto') {
-            return (
-              <circle key={pieza.id} cx={pieza.x} cy={pieza.y} r={grosorLinea} className="miniatura-perfil" />
-            );
-          }
-
-          return (
-            <line
-              key={pieza.id}
-              x1={x0}
-              y1={y0}
-              x2={x1}
-              y2={y1}
-              strokeWidth={grosorLinea}
-              className="miniatura-perfil"
-            />
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
 export default function Proyectos() {
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+  const [perfiles, setPerfiles] = useState<PerfilVentaneria[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const navegar = useNavigate();
@@ -155,6 +73,11 @@ export default function Proyectos() {
 
   useEffect(() => {
     cargarProyectos();
+    obtenerPerfilesVentaneria()
+      .then(setPerfiles)
+      .catch(() => {
+        // Sin perfiles la miniatura usa la descripción de cada pieza.
+      });
   }, []);
 
   useEffect(() => {
@@ -293,7 +216,11 @@ export default function Proyectos() {
                   >
                     <div className="miniatura-plano-contenedor">
                       {esDestacada && <span className="badge-reciente">Más reciente</span>}
-                      <MiniaturaPlano piezas={proyecto.piezas} />
+                      <MiniaturaPlano
+                        piezas={proyecto.piezas}
+                        perfiles={perfiles}
+                        hueco={proyecto.hueco}
+                      />
                     </div>
 
                     <div className="tarjeta-proyecto-cuerpo">
@@ -317,6 +244,11 @@ export default function Proyectos() {
                       </p>
 
                       <div className="chips-stats">
+                        <span className={`chip chip-lienzo ${proyecto.hueco ? '' : 'chip-libre'}`}>
+                          {proyecto.hueco
+                            ? `Hueco ${proyecto.hueco.anchoCm} × ${proyecto.hueco.altoCm} cm`
+                            : 'Mapa libre'}
+                        </span>
                         <span className="chip">
                           {resumen.totalPiezas} {resumen.totalPiezas === 1 ? 'pieza' : 'piezas'}
                         </span>

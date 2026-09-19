@@ -33,6 +33,10 @@ export function crearAplicacion(): Express {
 
   aplicacion.use('/api/docs', swaggerUi.serve, swaggerUi.setup(especificacionApi));
 
+  aplicacion.use((_req, res) => {
+    res.status(404).json({ exito: false, datos: null, mensaje: 'Ruta no encontrada.' });
+  });
+
   aplicacion.use(manejarErrores);
 
   return aplicacion;

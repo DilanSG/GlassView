@@ -129,6 +129,14 @@ export default function IconoHerramienta({ id }: { id: string }): JSX.Element {
           <path d="M8.5 6h7" {...SUAVE} />
         </svg>
       );
+    case 'ayuda':
+      return (
+        <svg {...TAMANO} {...TRAZO}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4" />
+          <path d="M12 16.8v.01" />
+        </svg>
+      );
     default:
       return (
         <svg {...TAMANO} {...TRAZO}>

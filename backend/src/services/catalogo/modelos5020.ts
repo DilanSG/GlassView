@@ -1,7 +1,6 @@
-import { a, h, f, p, v } from './tipos.js';
+import { a, h, p, v } from './tipos.js';
 import type { AccesorioModelo, ModeloVentaneria } from './tipos.js';
 
-/** Accesorios comunes del sistema 5020. */
 const accesorios5020 = (hojas: number): AccesorioModelo[] => [
   { seccion: 'TORNILLERIA', descripcion: '8 X 3/4¨', cantidad: 8 * hojas },
   { seccion: 'TORNILLERIA', descripcion: '8 X 1/2¨', cantidad: 8 },
@@ -13,7 +12,6 @@ const accesorios5020 = (hojas: number): AccesorioModelo[] => [
   { seccion: 'SEGURO', descripcion: 'PUNTO ROJO', cantidad: 1 },
 ];
 
-/** Modelos del sistema 5020 (carpintería de aluminio). */
 export const modelos5020: ModeloVentaneria[] = [
   {
     id: '5020-2-hojas',
