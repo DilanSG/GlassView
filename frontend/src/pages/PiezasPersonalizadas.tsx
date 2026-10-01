@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   actualizarPiezaPersonalizada,
   crearPiezaPersonalizada,
@@ -14,6 +15,11 @@ import ModalComunidad from '../componentes/piezas/ModalComunidad';
 import ModalMateriales from '../componentes/piezas/ModalMateriales';
 import { useSesion } from '../contextos/SesionContexto';
 import { useEditorCompleto } from '../hooks/useEditorCompleto';
+import {
+  activarPantallaCompletaHorizontal,
+  desactivarPantallaCompletaHorizontal,
+  elementoEnPantallaCompleta,
+} from '../utils/pantallaCompleta';
 import {
   MATERIALES_PREDEFINIDOS,
   cargarMaterialesPropios,
@@ -130,39 +136,24 @@ export default function PiezasPersonalizadas() {
 
   /** Pide la pantalla completa del editor y bloquea el horizontal si se puede. */
   async function solicitarPantallaCompleta(): Promise<void> {
-    const orientacion = screen.orientation as
-      | (ScreenOrientation & { lock?: (modo: string) => Promise<void>; unlock?: () => void })
-      | undefined;
-    try {
-      const contenedor = editorCompletoRef.current;
-      if (contenedor?.requestFullscreen && !document.fullscreenElement) {
-        await contenedor.requestFullscreen();
-      }
-      // En móviles, la pantalla completa permite bloquear el horizontal.
-      await orientacion?.lock?.('landscape');
-    } catch {
-      // Si el navegador bloquea la pantalla completa o el giro, el editor sigue abierto.
-    }
+    await activarPantallaCompletaHorizontal(editorCompletoRef.current);
   }
 
   function abrirEditor(): void {
-    setEditorAbierto(true);
+    // El overlay se muestra ya mismo para poder pedir la pantalla completa
+    // dentro del mismo gesto del usuario (si no, el navegador la rechaza).
+    flushSync(() => setEditorAbierto(true));
+    void solicitarPantallaCompleta();
   }
 
   function cerrarEditor(): void {
     setEditorAbierto(false);
-    const orientacion = screen.orientation as
-      | (ScreenOrientation & { lock?: (modo: string) => Promise<void>; unlock?: () => void })
-      | undefined;
-    if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => undefined);
-    }
-    orientacion?.unlock?.();
+    void desactivarPantallaCompletaHorizontal();
   }
 
-  // Al montar el editor a pantalla completa se solicita el modo nativo.
+  // Reintento tras el render, por si el primer intento no quedó a pantalla completa.
   useLayoutEffect(() => {
-    if (editorAbierto) {
+    if (editorAbierto && !elementoEnPantallaCompleta()) {
       void solicitarPantallaCompleta();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,12 +162,16 @@ export default function PiezasPersonalizadas() {
   // Salir de la pantalla completa (gesto atrás, Esc) cierra el editor.
   useEffect(() => {
     function alCambiarPantalla(): void {
-      if (!document.fullscreenElement) {
+      if (!elementoEnPantallaCompleta()) {
         setEditorAbierto(false);
       }
     }
     document.addEventListener('fullscreenchange', alCambiarPantalla);
-    return () => document.removeEventListener('fullscreenchange', alCambiarPantalla);
+    document.addEventListener('webkitfullscreenchange', alCambiarPantalla);
+    return () => {
+      document.removeEventListener('fullscreenchange', alCambiarPantalla);
+      document.removeEventListener('webkitfullscreenchange', alCambiarPantalla);
+    };
   }, []);
 
   // Mientras el editor está abierto la página de fondo no se desplaza.
@@ -520,8 +515,8 @@ export default function PiezasPersonalizadas() {
               <span className="piezas-editor-acceso-texto">
                 <span className="piezas-editor-acceso-titulo">Abrir editor de la pieza</span>
                 <span className="piezas-editor-acceso-ayuda">
-                  Se abre a pantalla completa con las herramientas, el lienzo y las capas. En el
-                  teléfono se dibuja en horizontal.
+                  Se abre a pantalla completa con las herramientas, el lienzo y las capas. En
+                  pantallas pequeñas se dibuja en horizontal.
                 </span>
               </span>
             </button>

@@ -13,6 +13,11 @@ import PanelDespiece from '../componentes/despiece/PanelDespiece';
 import AvisoOrientacion from '../componentes/lienzo/AvisoOrientacion';
 import MiniaturaPlano from '../piezas/MiniaturaPlano';
 import { exportarPlanoPdf } from '../pdf/exportarPlanoPdf';
+import {
+  activarPantallaCompletaHorizontal,
+  desactivarPantallaCompletaHorizontal,
+  elementoEnPantallaCompleta,
+} from '../utils/pantallaCompleta';
 import type {
   DespiecePiezas,
   ModeloVentaneria,
@@ -54,6 +59,7 @@ export default function DisenoProyecto({
   const [piezas, setPiezas] = useState<PiezaPlano[]>(proyecto.piezas);
   const [piezaSeleccionadaId, setPiezaSeleccionadaId] = useState<string | null>(null);
   const [despiece, setDespiece] = useState<DespiecePiezas | null>(null);
+  const [errorDespiece, setErrorDespiece] = useState('');
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [panelesVisibles, setPanelesVisibles] = useState(false);
   const [vistaPanel, setVistaPanel] = useState<'piezas' | 'despiece'>('piezas');
@@ -89,27 +95,22 @@ export default function DisenoProyecto({
 
   useEffect(() => {
     // La pantalla completa nativa puede salir con Esc: se sincroniza el estado.
-    const alCambiar = (): void => setPantallaCompleta(document.fullscreenElement !== null);
+    const alCambiar = (): void => setPantallaCompleta(elementoEnPantallaCompleta() !== null);
     document.addEventListener('fullscreenchange', alCambiar);
-    return () => document.removeEventListener('fullscreenchange', alCambiar);
+    document.addEventListener('webkitfullscreenchange', alCambiar);
+    return () => {
+      document.removeEventListener('fullscreenchange', alCambiar);
+      document.removeEventListener('webkitfullscreenchange', alCambiar);
+    };
   }, []);
 
   /** Abre o cierra la pantalla completa nativa del editor. */
   async function alternarPantallaCompleta(): Promise<void> {
-    const orientacion = screen.orientation as
-      | (ScreenOrientation & { lock?: (modo: string) => Promise<void>; unlock?: () => void })
-      | undefined;
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-        orientacion?.unlock?.();
-      } else {
-        await contenedorRef.current?.requestFullscreen();
-        // En móviles, la pantalla completa permite bloquear el horizontal.
-        await orientacion?.lock?.('landscape');
-      }
-    } catch {
-      // Si el navegador bloquea la pantalla completa o el giro, la edición continúa.
+    if (elementoEnPantallaCompleta()) {
+      await desactivarPantallaCompletaHorizontal();
+    } else {
+      // En móviles, la pantalla completa permite bloquear el horizontal.
+      await activarPantallaCompletaHorizontal(contenedorRef.current);
     }
   }
 
@@ -216,26 +217,37 @@ export default function DisenoProyecto({
   }, [proyecto.piezas]);
 
   useEffect(() => {
-    let cancelado = false;
+    // El despiece se calcula también al abrir el proyecto, no solo tras guardar.
+    setVersionDespiece((version) => version + 1);
+  }, [proyecto._id]);
+
+  const peticionDespieceRef = useRef(0);
+
+  useEffect(() => {
+    // Solo la última petición escribe el estado (las anteriores se descartan).
+    const peticion = peticionDespieceRef.current + 1;
+    peticionDespieceRef.current = peticion;
     const piezasActuales = piezasRef.current;
     if (piezasActuales.length === 0) {
       setDespiece(null);
+      setErrorDespiece('');
       return;
     }
     calcularDespiecePiezas(piezasActuales)
       .then((resultado) => {
-        if (!cancelado) {
+        if (peticion === peticionDespieceRef.current) {
           setDespiece(resultado);
+          setErrorDespiece('');
         }
       })
-      .catch(() => {
-        if (!cancelado) {
+      .catch((causa) => {
+        if (peticion === peticionDespieceRef.current) {
           setDespiece(null);
+          setErrorDespiece(
+            causa instanceof Error ? causa.message : 'No se pudo calcular el despiece.',
+          );
         }
       });
-    return () => {
-      cancelado = true;
-    };
   }, [versionDespiece]);
 
   const piezaSeleccionada = piezas.find((p) => p.id === piezaSeleccionadaId) ?? null;
@@ -382,6 +394,7 @@ export default function DisenoProyecto({
                 <PanelDespiece
                   cantidadPiezas={piezas.length}
                   despiece={despiece}
+                  error={errorDespiece}
                   piezaSeleccionada={piezaSeleccionada}
                   onEliminarPieza={(id) => {
                     void eliminarPieza(id);

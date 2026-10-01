@@ -3,6 +3,8 @@ import type { DespiecePiezas, PiezaPlano } from '../../tipos';
 export interface PanelDespieceProps {
   cantidadPiezas: number;
   despiece: DespiecePiezas | null;
+  /** Mensaje del último fallo al calcular el despiece, si lo hubo. */
+  error?: string;
   piezaSeleccionada: PiezaPlano | null;
   onEliminarPieza: (id: string) => void;
 }
@@ -16,6 +18,7 @@ function medidaSeleccionada(pieza: PiezaPlano): string {
 export default function PanelDespiece({
   cantidadPiezas,
   despiece,
+  error,
   piezaSeleccionada,
   onEliminarPieza,
 }: PanelDespieceProps): JSX.Element {
@@ -33,7 +36,9 @@ export default function PanelDespiece({
   if (!despiece) {
     return (
       <section className="panel-despiece" aria-label="Despiece del plano">
-        <p className="mensaje-error">No se pudo calcular el despiece.</p>
+        <p className="mensaje-error">
+          {error ? `No se pudo calcular el despiece: ${error}` : 'Calculando el despiece…'}
+        </p>
       </section>
     );
   }

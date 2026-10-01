@@ -656,7 +656,7 @@ export function crearPlanoPdf(
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
   pdf.setTextColor(90, 92, 96);
-  pdf.text('GLASSVIEW · CARPINTERÍA DE ALUMINIO Y VIDRIO', MARGEN, MARGEN + 1);
+  pdf.text('GLASSVIEW · ©IntoCode', MARGEN, MARGEN + 1);
 
   pdf.setFontSize(15);
   pdf.setTextColor(20, 20, 22);
