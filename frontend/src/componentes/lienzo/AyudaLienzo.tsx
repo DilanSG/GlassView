@@ -25,10 +25,14 @@ export default function AyudaLienzo({ abierta, onCerrar }: AyudaLienzoProps): JS
       </header>
       <ul className="ayuda-popout-lista">
         <li>1 cm = un cuadro de la rejilla.</li>
+        <li>En el móvil: toca una pieza para seleccionarla y arrástrala para moverla.</li>
+        <li>Pellizca con dos dedos para acercar o alejar y desplazar el plano.</li>
+        <li>Con «Desplazar plano» (mano) arrastra con un dedo para moverte.</li>
+        <li>Con «Seleccionar», arrastra sobre el vacío para elegir varias piezas.</li>
         <li>Rueda del ratón: acercar o alejar.</li>
-        <li>Herramienta «mano»: desplazar el plano.</li>
-        <li>Selecciona una pieza y pulsa el «+» central para medirla.</li>
+        <li>Pieza seleccionada y pulsa el «+» central para medirla.</li>
         <li>Supr: eliminar la pieza seleccionada.</li>
+        <li>Ctrl+Z: deshacer el último cambio.</li>
         <li>Tras dibujar, elige la REF del catálogo.</li>
       </ul>
     </aside>

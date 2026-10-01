@@ -170,7 +170,7 @@ export default function Facturacion() {
                   {estado.motivo === 'prueba'
                     ? `Tu prueba termina el ${formatearFecha(estado.pruebaHasta)}.`
                     : estado.motivo === 'expirado'
-                      ? `Tu prueba terminó el ${formatearFecha(estado.pruebaHasta)}. Reactiva tus planos y el despiece con la suscripción.`
+                      ? `Tu prueba terminó el ${formatearFecha(estado.pruebaHasta)}. Reactiva los planos y el despiece con la suscripción.`
                       : 'Tu cuenta está bloqueada y no puede activar la suscripción.'}
                 </p>
               </div>

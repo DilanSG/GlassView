@@ -106,6 +106,77 @@ export interface ModeloVentaneria {
 
 export type OrientacionPieza = 'horizontal' | 'vertical' | 'punto';
 
+export interface PuntoForma {
+  x: number;
+  y: number;
+}
+
+export interface TrazoForma {
+  rol: 'contorno' | 'vacio';
+  puntos: PuntoForma[];
+  /** false mientras se está trazando; al cerrarse pasa a ser una figura. */
+  cerrado?: boolean;
+  /** false oculta la capa sin borrarla. */
+  visible?: boolean;
+  /** Nombre propio de la capa; si falta se muestra «Capa N». */
+  nombre?: string;
+  /** Material propio de la capa; si falta, usa el de la pieza. */
+  material?: MaterialPiezaGuardado;
+}
+
+/**
+ * Forma libre dibujada por el usuario en un lienzo de diseño (cm). Al colocar
+ * la pieza, la forma se escala a su rectángulo: `contorno` es la silueta y
+ * `vacio` las cámaras huecas. `color` es el color del material elegido.
+ */
+export interface FormaPieza {
+  anchoCm: number;
+  altoCm: number;
+  color?: string;
+  trazos: TrazoForma[];
+}
+
+export type TipoPiezaPersonalizada = 'perfil' | 'vidrio' | 'acrilico' | 'herraje';
+
+/** Material de una pieza: nombre visible, color y familia a la que pertenece. */
+export interface MaterialPieza {
+  id: string;
+  nombre: string;
+  color: string;
+  tipo: TipoPiezaPersonalizada;
+}
+
+/** Material guardado en la pieza (snapshot, para que la forma lo conserve). */
+export interface MaterialPiezaGuardado {
+  nombre: string;
+  color: string;
+}
+
+/** Pieza de la biblioteca del usuario; puede ser privada o pública. */
+export interface PiezaPersonalizada {
+  _id: string;
+  nombre: string;
+  ref: string;
+  tipo: TipoPiezaPersonalizada;
+  categoria: PerfilCategoria;
+  publico: boolean;
+  espesorMm: number;
+  material?: MaterialPiezaGuardado;
+  forma: FormaPieza;
+  usuario?: string;
+}
+
+export interface DatosPiezaPersonalizada {
+  nombre: string;
+  ref?: string;
+  tipo: TipoPiezaPersonalizada;
+  categoria: PerfilCategoria;
+  publico: boolean;
+  espesorMm?: number;
+  material?: MaterialPiezaGuardado;
+  forma: FormaPieza;
+}
+
 export interface PiezaPlano {
   id: string;
   tipo: string;
@@ -120,6 +191,7 @@ export interface PiezaPlano {
   espesorMm: number;
   cantidad: number;
   dePreset?: boolean;
+  forma?: FormaPieza;
 }
 
 export type PerfilCategoria =

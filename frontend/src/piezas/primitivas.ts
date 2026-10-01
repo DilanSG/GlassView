@@ -27,7 +27,7 @@ export function rect(
   y: number,
   ancho: number,
   alto: number,
-  opciones: OpcionesTrazo & { radio?: number; relleno?: TonoPieza } = {},
+  opciones: OpcionesTrazo & { radio?: number; relleno?: TonoPieza; rellenoColor?: string } = {},
 ): Primitiva {
   // La geometría de los perfiles calcula las esquinas en cualquier orden, así
   // que aquí se normaliza a origen + tamaño absoluto.
@@ -41,7 +41,9 @@ export function rect(
     alto: altoNormalizado,
     radio: opciones.radio,
     relleno: opciones.relleno,
+    rellenoColor: opciones.rellenoColor,
     tono: opciones.tono,
+    tonoColor: opciones.tonoColor,
     grosor: opciones.grosor,
     trazo: opciones.trazo,
     opacidad: opciones.opacidad,
@@ -215,9 +217,14 @@ export function dibujarPrimitivas(
 ): void {
   for (const primitiva of primitivas) {
     const grosor = primitiva.grosor ?? GROSOR_FINO;
-    const colorTrazo = primitiva.tono ? paleta[primitiva.tono] : undefined;
+    const colorTrazo =
+      primitiva.tonoColor ?? (primitiva.tono ? paleta[primitiva.tono] : undefined);
     const colorRelleno =
-      'relleno' in primitiva && primitiva.relleno ? paleta[primitiva.relleno] : undefined;
+      'rellenoColor' in primitiva && primitiva.rellenoColor
+        ? primitiva.rellenoColor
+        : 'relleno' in primitiva && primitiva.relleno
+          ? paleta[primitiva.relleno]
+          : undefined;
 
     ctx.save();
     if (primitiva.opacidad !== undefined) {

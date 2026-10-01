@@ -6,6 +6,32 @@ export function obtenerColorVar(nombre: string, alternativo: string): string {
   return valor || alternativo;
 }
 
+/** Oscurece un color hexadecimal mezclándolo con negro (0 = igual, 1 = negro). */
+export function oscurecerColor(color: string, factor: number): string {
+  const hex = color.trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(hex)) {
+    return color;
+  }
+  const mezcla = [0, 2, 4].map((inicio) => {
+    const canal = parseInt(hex.slice(inicio, inicio + 2), 16);
+    return Math.round(canal * (1 - Math.min(Math.max(factor, 0), 1)));
+  });
+  return `#${mezcla.map((canal) => canal.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Convierte un color hexadecimal a componentes RGB (para el PDF). */
+export function colorARgb(color: string): [number, number, number] {
+  const hex = color.trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(hex)) {
+    return [0, 0, 0];
+  }
+  return [
+    parseInt(hex.slice(0, 2), 16),
+    parseInt(hex.slice(2, 4), 16),
+    parseInt(hex.slice(4, 6), 16),
+  ];
+}
+
 /** Colores de los materiales de las piezas (aluminio, vidrio, herrajes...). */
 export interface PaletaPiezas {
   perfil: string;

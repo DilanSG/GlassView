@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { PerfilVentaneria } from '../../tipos';
 import SeccionPieza from '../../piezas/SeccionPieza';
 import { identidadDePerfil, parametrosDe } from '../../piezas/resolver';
@@ -20,6 +21,15 @@ export default function SelectorRef({
   onCancelar,
   onElegir,
 }: SelectorRefProps): JSX.Element {
+  const campoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Solo se enfoca con ratón: en el móvil abriría el teclado al dibujar.
+    if (window.matchMedia?.('(pointer: fine)').matches) {
+      campoRef.current?.focus();
+    }
+  }, []);
+
   return (
     <div className="selector-ref">
       <div className="selector-ref-cabecera">
@@ -29,7 +39,7 @@ export default function SelectorRef({
         </button>
       </div>
       <input
-        autoFocus
+        ref={campoRef}
         value={terminoBusqueda}
         onChange={(evento) => onBuscar(evento.target.value)}
         placeholder="Buscar referencia..."

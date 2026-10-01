@@ -1,4 +1,5 @@
-import type { ModeloVentaneria } from '../../tipos';
+import { Link } from 'react-router-dom';
+import type { ModeloVentaneria, PiezaPersonalizada } from '../../tipos';
 import { HERRAMIENTAS } from '../../constantes';
 import IconoHerramienta from './IconoHerramienta';
 
@@ -6,11 +7,14 @@ export interface BarraHerramientasProps {
   herramienta: string;
   barraExpandida: boolean;
   presetsAbierto: boolean;
+  piezasAbierto: boolean;
   ayudaAbierta: boolean;
   modelos: ModeloVentaneria[];
+  piezasPersonalizadas: PiezaPersonalizada[];
   onCambiarHerramienta: (herramienta: string) => void;
   onAlternarBarra: () => void;
   onAlternarPresets: () => void;
+  onAlternarPiezas: () => void;
   onAlternarAyuda: () => void;
 }
 
@@ -19,14 +23,18 @@ export default function BarraHerramientas({
   herramienta,
   barraExpandida,
   presetsAbierto,
+  piezasAbierto,
   ayudaAbierta,
   modelos,
+  piezasPersonalizadas,
   onCambiarHerramienta,
   onAlternarBarra,
   onAlternarPresets,
+  onAlternarPiezas,
   onAlternarAyuda,
 }: BarraHerramientasProps): JSX.Element {
   const esPresetActivo = herramienta.startsWith('preset-');
+  const esPiezaActiva = herramienta.startsWith('custom-');
 
   return (
     <div className={`barra-herramientas ${barraExpandida ? 'expandida' : ''}`}>
@@ -84,6 +92,52 @@ export default function BarraHerramientas({
                 <span className="herramienta-nombre">{modelo.nombre}</span>
               </button>
             ))}
+          </div>
+        )}
+      </div>
+      <span className="barra-herramientas-separador" />
+      <div className="barra-presets">
+        <button
+          type="button"
+          className={`herramienta-boton preset ${esPiezaActiva || piezasAbierto ? 'activa' : ''}`}
+          onClick={onAlternarPiezas}
+          title="Piezas personalizadas (propias y públicas)"
+        >
+          <span className="icono-herramienta">
+            <IconoHerramienta id="piezas" />
+          </span>
+          <span className="herramienta-nombre">Piezas</span>
+        </button>
+        {piezasAbierto && (
+          <div className="preset-lista">
+            {piezasPersonalizadas.length === 0 && (
+              <p className="preset-lista-vacio">Todavía no hay piezas personalizadas.</p>
+            )}
+            {piezasPersonalizadas.map((pieza) => (
+              <button
+                key={pieza._id}
+                type="button"
+                className={`herramienta-boton preset-item ${
+                  herramienta === `custom-${pieza._id}` ? 'activa' : ''
+                }`}
+                onClick={() => {
+                  onCambiarHerramienta(`custom-${pieza._id}`);
+                  onAlternarPiezas();
+                }}
+                title={`${pieza.nombre}: arrastra en el lienzo para colocarla`}
+              >
+                <span className="icono-herramienta">
+                  <IconoHerramienta id="piezas" />
+                </span>
+                <span className="herramienta-nombre">
+                  {pieza.nombre}
+                  {pieza.publico && <small className="preset-item-chip">Pública</small>}
+                </span>
+              </button>
+            ))}
+            <Link className="preset-lista-enlace" to="/piezas">
+              Crear una pieza nueva
+            </Link>
           </div>
         )}
       </div>

@@ -6,7 +6,7 @@ export default function AvisoPrueba() {
   const { usuario } = useSesion();
   const ubicacion = useLocation();
 
-  if (!usuario || ubicacion.pathname === '/facturacion') {
+  if (!usuario || usuario.rol === 'admin' || ubicacion.pathname === '/facturacion') {
     return null;
   }
 

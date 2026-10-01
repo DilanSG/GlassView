@@ -35,6 +35,7 @@ Thumbs.db
 # ── Cobertura y pruebas puntuales ────────────────────────────
 coverage/
 frontend/test_pdf_fix.mjs
+frontend/plano-*.pdf
 
 # ── Caché de herramientas ────────────────────────────────────
 frontend/.vite/

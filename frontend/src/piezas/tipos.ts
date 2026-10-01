@@ -30,6 +30,8 @@ export type TonoPieza =
  */
 export interface PrimitivaBase {
   tono?: TonoPieza;
+  /** Color literal del material; tiene prioridad sobre `tono`. */
+  tonoColor?: string;
   /** Grosor del trazo en cm. */
   grosor?: number;
   trazo?: 'solida' | 'discontinua';
@@ -38,9 +40,9 @@ export interface PrimitivaBase {
 
 export type Primitiva =
   | (PrimitivaBase & { tipo: 'linea'; x1: number; y1: number; x2: number; y2: number })
-  | (PrimitivaBase & { tipo: 'rect'; x: number; y: number; ancho: number; alto: number; radio?: number; relleno?: TonoPieza })
-  | (PrimitivaBase & { tipo: 'poligono'; puntos: Punto[]; relleno?: TonoPieza })
-  | (PrimitivaBase & { tipo: 'circulo'; cx: number; cy: number; radio: number; relleno?: TonoPieza })
+  | (PrimitivaBase & { tipo: 'rect'; x: number; y: number; ancho: number; alto: number; radio?: number; relleno?: TonoPieza; rellenoColor?: string })
+  | (PrimitivaBase & { tipo: 'poligono'; puntos: Punto[]; relleno?: TonoPieza; rellenoColor?: string })
+  | (PrimitivaBase & { tipo: 'circulo'; cx: number; cy: number; radio: number; relleno?: TonoPieza; rellenoColor?: string })
   | (PrimitivaBase & { tipo: 'arco'; cx: number; cy: number; radio: number; inicio: number; fin: number });
 
 export type OrientacionPiezaDibujo = 'horizontal' | 'vertical';

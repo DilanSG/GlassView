@@ -77,6 +77,8 @@ export default function Inicio() {
           GlassView
         </Link>
 
+        <BotonTema />
+
         <div className="acciones-publicas">
           {usuario ? (
             <Link to="/proyectos" className="boton-cta boton-cta-pequeno">
@@ -92,13 +94,16 @@ export default function Inicio() {
               </Link>
             </>
           )}
-          <BotonTema />
         </div>
       </header>
 
       <main>
         <section className="hero">
           <div className="hero-contenido">
+            <span className="hero-marca">
+              <img src="/icono.png" alt="" className="hero-marca-logo" />
+              GlassView
+            </span>
             <h1 className="hero-titulo">
               Planos y despiece de cristalería,{' '}
               <span className="hero-titulo-acento">listos para cotizar</span>

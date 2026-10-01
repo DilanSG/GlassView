@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { haySesionActiva } from './api/clienteApi';
+import { ProveedorConfirmacion } from './componentes/dialogos/ConfirmacionContexto';
 import Estructura from './components/Estructura';
 import PulsosPlano from './components/PulsosPlano';
 import { SesionProveedor, useSesion } from './contextos/SesionContexto';
@@ -11,6 +12,7 @@ import Facturacion from './pages/Facturacion';
 import Inicio from './pages/Inicio';
 import NuevoProyecto from './pages/NuevoProyecto';
 import Perfil from './pages/Perfil';
+import PiezasPersonalizadas from './pages/PiezasPersonalizadas';
 import Proyectos from './pages/Proyectos';
 import Registro from './pages/Registro';
 
@@ -70,10 +72,11 @@ function RutaInvitados({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <SesionProveedor>
-      <div className="fondo-plano" aria-hidden="true">
-        <PulsosPlano />
-      </div>
-      <Routes>
+      <ProveedorConfirmacion>
+        <div className="fondo-plano" aria-hidden="true">
+          <PulsosPlano />
+        </div>
+        <Routes>
         <Route path="/" element={<Inicio />} />
         <Route
           path="/acceso"
@@ -107,11 +110,13 @@ export default function App() {
               <Route path="/proyectos" element={<Proyectos />} />
               <Route path="/nuevo-proyecto" element={<NuevoProyecto />} />
               <Route path="/proyectos/:id" element={<EditorPlano />} />
+              <Route path="/piezas" element={<PiezasPersonalizadas />} />
             </Route>
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ProveedorConfirmacion>
     </SesionProveedor>
   );
 }

@@ -1,0 +1,1233 @@
+/* ── Editor de piezas personalizadas ── */
+
+.piezas-editor {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.1rem 1.2rem;
+}
+
+.piezas-editor-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+
+.piezas-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.piezas-selector select {
+  min-width: min(320px, 60vw);
+  padding: 0.5rem 0.6rem;
+  border-radius: 9px;
+  background-color: var(--bg-primary);
+}
+
+.piezas-editor-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.piezas-editor-aviso {
+  margin: 0 0 0.9rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.boton-mini {
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.boton-mini:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.boton-mini.peligro {
+  border-color: color-mix(in srgb, var(--error) 45%, var(--border));
+  color: var(--error);
+}
+
+.piezas-editor-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.piezas-editor-campos label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.piezas-editor-campos input,
+.piezas-editor-campos select {
+  padding: 0.5rem 0.6rem;
+  border-radius: 9px;
+  background-color: var(--bg-primary);
+}
+
+
+/* ── Editor de formas ── */
+
+.editor-forma {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* Cuerpo: herramientas verticales, lienzo y panel de capas. */
+.editor-forma-cuerpo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.editor-forma-herramientas {
+  flex-shrink: 0;
+}
+
+.editor-forma-lienzo-marco {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex: 1 1 0;
+  min-width: 0;
+  --lienzo-alto: min(62vh, 620px);
+  --lienzo-ancho: calc(var(--lienzo-alto) * var(--lienzo-ratio, 1));
+}
+
+.editor-forma-lienzo {
+  display: block;
+  flex: none;
+  width: 100%;
+  max-width: var(--lienzo-ancho);
+  height: auto;
+  max-height: var(--lienzo-alto);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--bg-secondary);
+  touch-action: none;
+}
+
+/* Deshacer y rehacer flotan sobre la esquina superior izquierda del lienzo. */
+.editor-forma-lienzo-controles {
+  position: absolute;
+  top: 0.45rem;
+  left: calc(max(0px, (100% - var(--lienzo-ancho)) / 2) + 0.45rem);
+  display: flex;
+  gap: 0.3rem;
+  z-index: 2;
+}
+
+.boton-historial-lienzo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background-color: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(4px);
+}
+
+.boton-historial-lienzo:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.boton-historial-lienzo:disabled {
+  opacity: 0.45;
+}
+
+/* El cursor anticipa lo que hace cada herramienta. */
+.editor-forma-lienzo.seleccionar {
+  cursor: default;
+}
+
+.editor-forma-lienzo.mover {
+  cursor: move;
+}
+
+.editor-forma-lienzo.punto {
+  cursor: crosshair;
+}
+
+.editor-forma-lienzo.borrarPunto,
+.editor-forma-lienzo.borrarSeccion {
+  cursor: pointer;
+}
+
+.editor-forma-lienzo.material {
+  cursor: cell;
+}
+
+.editor-forma-seccion {
+  fill: transparent;
+  transition: fill 0.12s ease;
+}
+
+.editor-forma-lienzo.seleccionar .editor-forma-seccion:hover {
+  fill: color-mix(in srgb, var(--informacion) 12%, transparent);
+}
+
+.editor-forma-lienzo.borrarSeccion .editor-forma-seccion:hover {
+  fill: color-mix(in srgb, var(--error) 18%, transparent);
+}
+
+.editor-forma-lienzo.material .editor-forma-seccion:hover {
+  fill: color-mix(in srgb, var(--informacion) 18%, transparent);
+}
+
+.editor-forma-vertice-hit {
+  cursor: grab;
+}
+
+.editor-forma-vertice-hit:active {
+  cursor: grabbing;
+}
+
+/* Panel de capas, al estilo de un editor de imagen. */
+.editor-forma-capas {
+  display: flex;
+  flex-direction: column;
+  width: 214px;
+  flex-shrink: 0;
+  max-height: min(62vh, 620px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.editor-forma-capas-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--linea-fina);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.editor-forma-capas-cuenta {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background-color: var(--bg-tertiary);
+  font-size: 0.68rem;
+  letter-spacing: 0;
+}
+
+.editor-forma-capas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.capa-fila {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.45rem;
+  border: 1px solid var(--linea-fina);
+  border-radius: 10px;
+  background-color: var(--bg-primary);
+}
+
+.capa-fila.activa {
+  background-color: var(--bg-pressed);
+  border-color: var(--border-strong);
+}
+
+.capa-ojo {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.capa-ojo:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.capa-nombre {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.capa-titulo {
+  max-width: 100%;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capa-detalle {
+  font-size: 0.66rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Campo para renombrar la capa en la misma fila. */
+.capa-nombre-campo {
+  width: 100%;
+  min-width: 0;
+  padding: 0.2rem 0.35rem;
+  border-radius: 7px;
+  background-color: var(--bg-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.capa-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Muestra y cambia el material de la capa. */
+.capa-material {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background-color: var(--aluminio);
+  cursor: pointer;
+}
+
+.capa-material:hover {
+  border-color: var(--text-secondary);
+  transform: scale(1.06);
+}
+
+.capa-material.vacio {
+  background-color: var(--aluminio-oscuro);
+  background-image: linear-gradient(
+    135deg,
+    transparent 42%,
+    var(--border-strong) 42%,
+    var(--border-strong) 58%,
+    transparent 58%
+  );
+}
+
+.capa-renombrar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.capa-renombrar:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.editor-forma-capas-pie {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-top: 1px solid var(--linea-fina);
+}
+
+.editor-forma-capas-pie button {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 0.32rem 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.editor-forma-capas-pie button:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* La ayuda flota sobre el lienzo, como en el editor de planos. */
+.ayuda-forma {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 6;
+  width: min(320px, calc(100% - 0.9rem));
+  max-height: calc(100% - 0.9rem);
+}
+
+/* ── Popover de piezas en la barra de herramientas ── */
+
+.preset-lista-vacio {
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.preset-lista .preset-item .herramienta-nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.4rem;
+}
+
+.preset-item-chip {
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--exito) 16%, var(--bg-secondary));
+  color: var(--exito);
+  font-size: 0.62rem;
+}
+
+.preset-lista-enlace {
+  margin-top: 0.2rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.preset-lista-enlace:hover {
+  background-color: var(--bg-pressed);
+  color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .piezas-editor {
+    padding: 0.9rem;
+  }
+
+  .piezas-editor-barra {
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .piezas-selector {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .piezas-selector select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Las acciones se reparten en dos columnas: la confirmación de borrado
+     comparte fila y los botones principales ocupan todo el ancho. */
+  .piezas-editor-acciones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    width: 100%;
+  }
+
+  .piezas-editor-acciones > .boton-secundario,
+  .piezas-editor-acciones > .boton-primario {
+    grid-column: 1 / -1;
+  }
+
+  .piezas-editor-acciones > button {
+    width: 100%;
+    min-height: 2.6rem;
+  }
+
+  .piezas-editor-campos {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+/* En pantallas estrechas las capas bajan a su propia fila. */
+@media (max-width: 900px) {
+  .editor-forma-cuerpo {
+    flex-wrap: wrap;
+  }
+
+  .editor-forma-lienzo-marco {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+
+  .editor-forma-capas {
+    width: 100%;
+    max-height: 240px;
+  }
+}
+
+/* ── Material de la pieza ── */
+
+.piezas-material {
+  margin-bottom: 1rem;
+}
+
+.piezas-material-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--bg-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.piezas-material-card:hover {
+  border-color: var(--border-strong);
+}
+
+.piezas-material-muestra {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+
+.piezas-material-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.piezas-material-nombre {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.piezas-material-tipo {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.piezas-material-vacio {
+  flex: 1;
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.piezas-material-cambiar {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.piezas-material-card:hover .piezas-material-cambiar {
+  color: var(--text-primary);
+}
+
+/* ── Visibilidad de la pieza ── */
+
+.piezas-publico {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--bg-primary);
+}
+
+.piezas-publico-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.piezas-publico-etiqueta {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.piezas-publico-ayuda {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+}
+
+.interruptor-publico {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.interruptor-publico:hover:not(:disabled) {
+  background: none;
+}
+
+.interruptor-publico-carril {
+  position: relative;
+  display: block;
+  width: 60px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.interruptor-publico.activo .interruptor-publico-carril {
+  background-color: color-mix(in srgb, var(--exito) 22%, var(--bg-tertiary));
+  border-color: color-mix(in srgb, var(--exito) 45%, var(--border));
+}
+
+.interruptor-publico-perilla {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--bg-pressed);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease;
+  z-index: 1;
+}
+
+.interruptor-publico.activo .interruptor-publico-perilla {
+  transform: translateX(30px);
+}
+
+.interruptor-publico-icono {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.interruptor-publico-icono-no {
+  left: 15px;
+}
+
+.interruptor-publico-icono-si {
+  left: 45px;
+}
+
+.interruptor-publico.activo .interruptor-publico-icono-si {
+  color: var(--exito);
+}
+
+.interruptor-publico-texto {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 4.5rem;
+  text-align: left;
+}
+
+/* ── Modales de piezas y materiales ── */
+
+.modal-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-cabecera h3 {
+  margin: 0;
+}
+
+.modal-cabecera p {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-width: 44ch;
+}
+
+.modal-cerrar {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-cerrar:hover:not(:disabled) {
+  background: none;
+  color: var(--text-primary);
+}
+
+.modal-comunidad {
+  max-width: 640px;
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+}
+
+.miniatura-forma {
+  width: 100%;
+  height: 100%;
+}
+
+.rejilla-comunidad {
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem 0.2rem 0.2rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.7rem;
+  overflow-y: auto;
+}
+
+.tarjeta-comunidad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--bg-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tarjeta-comunidad:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-tertiary);
+}
+
+.tarjeta-comunidad-vista {
+  display: grid;
+  place-items: center;
+  height: 92px;
+  border-radius: 9px;
+  background-color: var(--bg-tertiary);
+}
+
+.tarjeta-comunidad-vista .miniatura-forma {
+  width: 80px;
+  height: 80px;
+}
+
+.tarjeta-comunidad-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.tarjeta-comunidad-nombre {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarjeta-comunidad-meta {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.modal-materiales {
+  max-width: 620px;
+  max-height: min(82vh, 660px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-materiales-cuerpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.modal-materiales-seccion {
+  margin-bottom: 1rem;
+}
+
+.modal-materiales-seccion h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.rejilla-materiales {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.55rem;
+}
+
+.tarjeta-material {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background-color: var(--bg-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tarjeta-material:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-tertiary);
+}
+
+.tarjeta-material.activa {
+  border-color: var(--border-strong);
+  background-color: var(--bg-pressed);
+}
+
+.tarjeta-material-color {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+}
+
+.tarjeta-material-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.tarjeta-material-nombre {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarjeta-material-tipo {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.modal-materiales-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--linea-fina);
+}
+
+.material-nuevo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 320px;
+}
+
+.material-nuevo input:not([type='color']) {
+  width: 160px;
+}
+
+.material-nuevo input[type='color'] {
+  width: 42px;
+  height: 36px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.material-nuevo select {
+  width: auto;
+  padding: 0.5rem 0.6rem;
+  border-radius: 9px;
+}
+
+.piezas-editor-cuenta {
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background-color: var(--bg-pressed);
+  font-size: 0.68rem;
+}
+
+/* ── Ajustes de móvil ────────────────────────────────────────── */
+
+/* Modales: tarjetas a dos columnas y formulario de material apilado. */
+@media (max-width: 480px) {
+  /* El interruptor sube junto al título y la ayuda ocupa el ancho completo. */
+  .piezas-publico {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 0.2rem;
+    padding: 0.65rem 0.7rem;
+  }
+
+  .piezas-publico-texto {
+    display: contents;
+  }
+
+  .piezas-publico-etiqueta {
+    grid-area: 1 / 1;
+  }
+
+  .piezas-publico > .interruptor-publico {
+    grid-area: 1 / 2;
+  }
+
+  .piezas-publico-ayuda {
+    grid-area: 2 / 1 / 3 / 3;
+    margin-top: 0;
+  }
+
+  .interruptor-publico-texto {
+    min-width: 0;
+  }
+
+  .modal-cabecera {
+    gap: 0.6rem;
+  }
+
+  .rejilla-comunidad {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .tarjeta-comunidad {
+    padding: 0.55rem;
+  }
+
+  .tarjeta-comunidad-vista {
+    height: 74px;
+  }
+
+  .tarjeta-comunidad-vista .miniatura-forma {
+    width: 64px;
+    height: 64px;
+  }
+
+  .rejilla-materiales {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .tarjeta-material {
+    gap: 0.45rem;
+    padding: 0.5rem;
+  }
+
+  .tarjeta-material-color {
+    width: 24px;
+    height: 24px;
+  }
+
+  .tarjeta-material-nombre {
+    font-size: 0.78rem;
+  }
+
+  .material-nuevo {
+    flex: 1 1 100%;
+  }
+
+  .material-nuevo input:not([type='color']) {
+    width: 100%;
+  }
+
+  .modal-materiales-pie {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ── Editor a pantalla completa ──────────────────────────────── */
+
+/* En móviles y tablets el dibujo se abre aparte: el formulario queda visible
+   en la página y el editor ocupa toda la pantalla con herramientas, lienzo
+   y capas. */
+.editor-completo {
+  display: none;
+}
+
+.editor-completo.abierto {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem calc(0.7rem + env(safe-area-inset-bottom));
+  background-color: var(--bg-primary);
+  overflow: hidden;
+}
+
+.editor-completo-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.editor-completo-titulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.editor-completo-cerrar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.editor-completo-cerrar:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* El modal de materiales aprovecha toda la pantalla del editor. */
+.editor-completo .modal-fondo {
+  padding: 0.6rem;
+}
+
+.editor-completo .modal-materiales {
+  max-width: min(680px, 100%);
+  max-height: 100%;
+}
+
+.editor-completo .material-nuevo {
+  flex: 1 1 100%;
+}
+
+.editor-completo .editor-forma {
+  flex: 1;
+  min-height: 0;
+}
+
+/* En vertical (aviso de girar) se muestra la navbar, transparente como el resto. */
+.editor-completo > .barra-navegacion {
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
+  /* De borde a borde, como en el resto de las vistas. */
+  margin: -0.6rem -0.75rem 0;
+  background-color: transparent;
+}
+
+@media (orientation: landscape) {
+  /* En horizontal el editor ocupa todo: sin navbar, solo el diseño. */
+  .editor-completo > .barra-navegacion {
+    display: none;
+  }
+}
+
+/* Con el teléfono en horizontal el editor usa todo el ancho: herramientas a la
+   izquierda, lienzo al centro y capas a la derecha. */
+@media (orientation: landscape) {
+  .editor-completo .editor-forma-cuerpo {
+    flex: 1;
+    min-height: 0;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .editor-completo .editor-forma-herramientas {
+    flex-shrink: 0;
+  }
+
+  /* Barra compacta: en horizontal caben todas las herramientas. */
+  .editor-completo .barra-herramientas {
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .editor-completo .barra-boton-expandir {
+    padding: 3px;
+  }
+
+  .editor-completo .herramienta-boton {
+    padding: 3px 4px;
+  }
+
+  .editor-completo .barra-herramientas-separador {
+    margin: 1px 0;
+  }
+
+  .editor-completo .editor-forma-lienzo-marco {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    /* El lienzo aprovecha toda la altura libre del editor en horizontal. */
+    --lienzo-alto: calc(100dvh - 4.6rem);
+  }
+
+  .editor-completo .editor-forma-capas {
+    width: 200px;
+    flex-shrink: 0;
+    max-height: calc(100dvh - 4.6rem);
+  }
+}
+
+/* Acceso al editor desde la página: vista previa y botón. */
+.piezas-editor-acceso-boton {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.piezas-editor-acceso-boton:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+}
+
+.piezas-editor-acceso-vista {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg-secondary);
+}
+
+.piezas-editor-acceso-vista .miniatura-forma {
+  width: 68px;
+  height: 68px;
+}
+
+.piezas-editor-acceso-vacio {
+  color: var(--text-tertiary);
+}
+
+.piezas-editor-acceso-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.piezas-editor-acceso-titulo {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.piezas-editor-acceso-ayuda {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}

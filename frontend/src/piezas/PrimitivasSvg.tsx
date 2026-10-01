@@ -9,8 +9,14 @@ function pintarPrimitiva(
   escalaTrazo: number,
   trazoPantalla?: number,
 ): JSX.Element {
-  const trazo = primitiva.tono ? paleta[primitiva.tono] : undefined;
-  const relleno = 'relleno' in primitiva && primitiva.relleno ? paleta[primitiva.relleno] : undefined;
+  const trazo =
+    primitiva.tonoColor ?? (primitiva.tono ? paleta[primitiva.tono] : undefined);
+  const relleno =
+    'rellenoColor' in primitiva && primitiva.rellenoColor
+      ? primitiva.rellenoColor
+      : 'relleno' in primitiva && primitiva.relleno
+        ? paleta[primitiva.relleno]
+        : undefined;
   const grosorBase = primitiva.grosor ?? GROSOR_FINO;
   const grosor =
     trazoPantalla !== undefined

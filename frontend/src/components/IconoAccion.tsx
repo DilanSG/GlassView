@@ -1,6 +1,6 @@
-export type NombreAccion = 'panel' | 'descargar' | 'ojo' | 'lapiz';
+export type NombreAccion = 'panel' | 'descargar' | 'ojo' | 'lapiz' | 'deshacer';
 
-/** Iconos de las acciones del editor (piezas, descargar, vista, editar). */
+/** Iconos de las acciones del editor (deshacer, piezas, descargar, vista, editar). */
 export default function IconoAccion({ nombre }: { nombre: NombreAccion }): JSX.Element {
   const comunes = {
     viewBox: '0 0 24 24',
@@ -15,6 +15,13 @@ export default function IconoAccion({ nombre }: { nombre: NombreAccion }): JSX.E
   } as const;
 
   switch (nombre) {
+    case 'deshacer':
+      return (
+        <svg {...comunes}>
+          <path d="M7.5 6.5 4 10l3.5 3.5" />
+          <path d="M4 10h9.5a5.5 5.5 0 0 1 0 11H9.5" />
+        </svg>
+      );
     case 'panel':
       return (
         <svg {...comunes}>

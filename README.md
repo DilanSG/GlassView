@@ -21,7 +21,7 @@
 
 ---
 
-GlassView es una aplicación web para dibujar planos de instalaciones de cristalería y sacar de ahí el despiece de la obra: cuántos metros lineales de cada perfil, cuántos metros cuadrados de vidrio y qué herrajes y empaques se necesitan. El catálogo de modelos y las fórmulas de corte salen de un Excel real de ventanería (`descuentos de ventaneria.xlsx`), no de medidas inventadas.
+GlassView es una aplicación web para dibujar planos de instalaciones de cristalería y sacar de ahí el despiece de la obra: cuántos metros lineales de cada perfil, cuántos metros cuadrados de vidrio y qué herrajes y empaques se necesitan.
 
 El proyecto está en desarrollo activo. El dibujo, las plantillas, el despiece y el PDF funcionan de punta a punta; el cobro de la suscripción todavía es simulado y los precios del despiece aún no se muestran en la interfaz.
 
@@ -31,15 +31,22 @@ El proyecto está en desarrollo activo. El dibujo, las plantillas, el despiece y
 |---|---|
 | ![Editor en tema claro](docs/editor-despiece.png) | ![Editor en tema oscuro](docs/editor-despiece-oscuro.png) |
 
+| Piezas personalizadas | Pieza propia en el plano |
+|---|---|
+| ![Piezas personalizadas](docs/piezas-personalizadas.png) | ![Pieza personalizada colocada](docs/editor-pieza-propia.png) |
+
 ## Funcionalidad
 
 Cada cuenta arranca con una prueba gratuita de `TRIAL_DAYS` días (10 por defecto). Durante la prueba, o con la suscripción activa, se puede usar todo:
 
-- **Editor de planos a escala real** (todo en centímetros) con rejilla, zoom, desplazamiento, pantalla completa y modo vista. Si el proyecto tiene un *hueco de obra*, el área dibujable se limita a ese vano y las piezas no pueden salirse de él; si no, el lienzo es un mapa libre.
+- **Todo funciona en móvil**: las páginas se adaptan a pantallas pequeñas (barra de navegación compacta con menú desplegable —enlaces, tema y cuenta—, listas y paneles en una columna, tarjetas y tablas con desplazamiento). Los editores se usan en horizontal: en vertical aparece una pantalla con la marca del dispositivo y una vista previa de lo que se está editando, que ofrece poner la app a pantalla completa para bloquear el giro. El lienzo responde a gestos: pellizcar para acercar o alejar, arrastrar con la mano para desplazar y tocar o arrastrar piezas y vértices para moverlos.
+- **Editor de planos a escala real** (todo en centímetros) con rejilla, zoom, desplazamiento, pantalla completa, modo vista y **deshacer** (Ctrl+Z o el icono del encabezado). Al abrir, la vista se encuadra sola (el hueco o el contenido) y sigue reajustándose hasta que el usuario mueve o hace zoom; en táctil, pellizcar acerca o aleja y desplaza, y tocar una pieza la selecciona para moverla. Si el proyecto tiene un *hueco de obra*, el área dibujable se limita a esas medidas y las piezas no pueden salirse; si no, el lienzo es un mapa libre.
 - **Piezas con geometría propia**, no rectángulos genéricos: jambas, cabezales, sillares, enganches, traslapes, rieles, canales U, tubos, adaptadores y pisavidrios se dibujan como perfiles de aluminio con su cámara hueca, garganta de vidrio y detalles de cada tipo (gotero, peldaño, gancho, recibidor...). El vidrio, el acrílico, las rodachinas, manijas, seguros, empaques y felpas también tienen su forma. La misma geometría alimenta el lienzo Konva, las miniaturas de la lista de proyectos y el PDF.
 - **Plantillas por modelo**: 22 modelos repartidos en 7 familias (5020, 744, 8025, 7038, 3831, P.B. y divisiones de baño) que colocan automáticamente el marco, las hojas, los rieles, los parales y los vidrios con las medidas de corte del catálogo.
 - **Panel de piezas y despiece** con pestañas: la pestaña *Piezas* agrupa el plano en perfiles, vidrios y herrajes y permite seleccionar o eliminar cada pieza; la pestaña *Despiece* resume la obra y agrupa los cortes por REF con metros lineales, área de vidrio y conteo de herrajes.
-- **Exportación a PDF** vectorial en A5, con las piezas dibujadas con su geometría real y cotas en centímetros en los cuatro lados.
+- **Biblioteca de piezas personalizadas**: cada cuenta diseña sus propias piezas dibujando solo la forma sobre una rejilla; las medidas se definen al colocar la pieza en el plano. El editor tiene barra de herramientas expandible (con nombres), panel de capas (renombrar, ocultar, reordenar, agregar y eliminar), guía de trazado, arrastre de vértices y de figuras completas, deshacer y rehacer (Ctrl+Z / Ctrl+Shift+Z) y una ayuda con las instrucciones. Al cerrar una figura se elige su **material**, que también se cambia por capa desde la tarjeta de la capa con su color; hay materiales de partida (aluminios, vidrios, acrílicos y herrajes) y materiales propios. En móvil el editor se abre a pantalla completa y se dibuja en horizontal; un interruptor permite publicar la pieza y las públicas se exploran en una galería aparte.
+- **Exportación a PDF** vectorial en A4: la primera página trae el plano con su geometría real, cotas por tramos y totales en los cuatro lados y cada pieza numerada; después, la tabla de **detalle por pieza** (REF, descripción, medidas, espesor, cantidad y posición) y el **despiece por grupos de taller** (MARCO, HOJAS, OTROS PERFILES, EMPAQUE, VIDRIOS y HERRAJES) con las medidas de corte, las cantidades y los metros lineales o metros cuadrados.
+- **Diálogos propios**: las acciones destructivas (eliminar la cuenta, un proyecto o un usuario) se confirman con un modal de la app; para borrar la cuenta hay que escribir su correo.
 - **Panel de administración** para listar, crear, bloquear y eliminar cuentas. El administrador no puede ver los proyectos de nadie: cada usuario solo accede a los suyos.
 
 ### Precio local
@@ -65,7 +72,7 @@ La suscripción cuesta `PRICE_USD` dólares al mes, pero se muestra convertida a
 
 El backend separa rutas, controladores y servicios: la lógica de negocio vive en `services/` y los controladores solo orquestan. Todas las respuestas tienen la forma `{ exito, datos, mensaje }`, y los errores de sesión o de plan agregan un `codigo` (`NO_AUTENTICADO`, `SUSCRIPCION_REQUERIDA`, `PERMISOS_INSUFICIENTES`) que el frontend usa para reaccionar.
 
-El frontend consume la API solo a través de `src/api/clienteApi.ts`; no conoce la base de datos. La sesión vive en `src/contextos/SesionContexto.tsx`.
+El frontend consume la API solo a través de `src/api/clienteApi.ts`; no conoce la base de datos. La sesión vive en `src/contextos/SesionContexto.tsx`. Las acciones destructivas se confirman con el diálogo propio que provee `useConfirmacion()` (`src/componentes/dialogos/`), en lugar de los `window.confirm` nativos.
 
 La pieza central del frontend es `src/piezas/`. Cada pieza se describe una sola vez con primitivas abstractas (líneas, rectángulos, polígonos) en centímetros, y esas primitivas se pintan después en Konva, en SVG y en el PDF. Por eso una jamba se ve igual en el editor, en la miniatura de la lista y en el plano exportado. La identidad de cada pieza (qué clase visual es) se resuelve combinando su tipo, su REF y su descripción, y hay ganchos (`PARAMETROS_POR_REF`, `DEFINICIONES_POR_SISTEMA`) preparados para cuando existan las secciones comerciales exactas de cada sistema.
 
@@ -78,10 +85,10 @@ GlassView/
 ├── backend/
 │   └── src/
 │       ├── config/         # Lectura de variables de entorno
-│       ├── controllers/    # Endpoints (auth, catálogo, facturación, proyectos)
+│       ├── controllers/    # Endpoints (auth, catálogo, facturación, proyectos, piezas)
 │       ├── docs/           # Especificación OpenAPI
 │       ├── middleware/     # autenticar, requiereSuscripcion, soloAdmin, errores
-│       ├── models/         # Esquemas Mongoose (Usuario, Proyecto, Pieza)
+│       ├── models/         # Esquemas Mongoose (Usuario, Proyecto, Pieza, PiezaPersonalizada)
 │       ├── routes/         # Definición de rutas
 │       └── services/
 │           ├── catalogo/   # Modelos por familia y cálculo de despiece
@@ -95,12 +102,12 @@ GlassView/
 ├── frontend/
 │   └── src/
 │       ├── api/            # clienteApi.ts
-│       ├── componentes/    # Lienzo Konva, panel de despiece, diálogos
+│       ├── componentes/    # Lienzo Konva, paneles de piezas y despiece, diálogos
 │       ├── components/     # Navegación, editor, landing, piezas de UI
 │       ├── contextos/      # Sesión
 │       ├── estilos/        # CSS por zona (incluye el tema oscuro)
-│       ├── hooks/          # useZoomPan, useRejilla, useTema
-│       ├── pages/          # Inicio, Acceso, Registro, Proyectos, editor...
+│       ├── hooks/          # useZoomPan, useRejilla, useTema, useEsMovil, useEditorCompleto
+│       ├── pages/          # Inicio, Acceso, Proyectos, Piezas, Perfil, editores...
 │       ├── pdf/            # Exportación del plano
 │       ├── piezas/         # Motor de geometría paramétrica
 │       └── utils/          # Geometría, colores, formato, país
@@ -185,6 +192,8 @@ La documentación interactiva está en `http://localhost:4000/api/docs`. Las rut
 | `GET /api/catalogo-ventaneria` · `/perfiles` | Modelos y diccionario de REFs |
 | `POST /api/catalogo-ventaneria/despiece` · `/despiece-piezas` | Despiece por modelo / por piezas dibujadas |
 | `POST /api/catalogo-ventaneria/preset` | Piezas de una plantilla |
+| `GET` · `POST /api/piezas-personalizadas` | Biblioteca de piezas propias y públicas |
+| `PUT` · `DELETE /api/piezas-personalizadas/:id` | Editar / eliminar una pieza propia |
 | `GET` · `POST /api/proyectos` | Listar / crear proyectos propios |
 | `GET` · `PUT` · `DELETE /api/proyectos/:id` | Gestionar un proyecto propio |
 

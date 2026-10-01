@@ -23,6 +23,10 @@ export interface UseZoomPanResultado {
   etapaRef: RefObject<Konva.Stage>;
   contenedorRef: RefObject<HTMLDivElement>;
   aplicarZoom: (factor: number) => void;
+  /** Zoom manteniendo fijo un punto de la pantalla (pinza táctil). */
+  aplicarZoomEnPunto: (factor: number, punto: PuntoPlano) => void;
+  /** Desplaza la vista unos píxeles (paneo con dos dedos). */
+  desplazarVista: (dx: number, dy: number) => void;
   acercarAlejar: (evento: Konva.KonvaEventObject<WheelEvent>) => void;
   iniciarPan: (punto: PuntoPlano) => void;
   aplicarPan: (punto: PuntoPlano) => boolean;
@@ -73,21 +77,31 @@ export function useZoomPan(): UseZoomPanResultado {
   function aplicarZoom(factor: number): void {
     const etapa = etapaRef.current;
     if (!etapa) return;
+    aplicarZoomEnPunto(factor, { x: etapa.width() / 2, y: etapa.height() / 2 });
+  }
+
+  /** Aplica un factor de zoom manteniendo fijo un punto de la pantalla. */
+  function aplicarZoomEnPunto(factor: number, punto: PuntoPlano): void {
+    const etapa = etapaRef.current;
+    if (!etapa) return;
     setVista((actual) => {
-      const centroMundo = {
-        x: (etapa.width() / 2 - actual.x) / actual.zoom,
-        y: (etapa.height() / 2 - actual.y) / actual.zoom,
+      const puntoMundo = {
+        x: (punto.x - actual.x) / actual.zoom,
+        y: (punto.y - actual.y) / actual.zoom,
       };
-      const siguiente = Math.min(
-        ZOOM_MAX,
-        Math.max(ZOOM_MIN, actual.zoom * factor),
-      );
+      const siguiente = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, actual.zoom * factor));
       return {
         zoom: siguiente,
-        x: actual.x - centroMundo.x * (siguiente - actual.zoom),
-        y: actual.y - centroMundo.y * (siguiente - actual.zoom),
+        x: actual.x - puntoMundo.x * (siguiente - actual.zoom),
+        y: actual.y - puntoMundo.y * (siguiente - actual.zoom),
       };
     });
+  }
+
+  /** Desplaza la vista unos píxeles de pantalla (paneo con dos dedos). */
+  function desplazarVista(dx: number, dy: number): void {
+    if (dx === 0 && dy === 0) return;
+    setVista((actual) => ({ ...actual, x: actual.x + dx, y: actual.y + dy }));
   }
 
   /** Rueda del ratón: aleja/acerca manteniendo fijo el punto bajo el cursor. */
@@ -150,7 +164,8 @@ export function useZoomPan(): UseZoomPanResultado {
   function encuadrar(rango: { x: number; y: number; ancho: number; alto: number } | null): void {
     const etapa = etapaRef.current;
     if (!etapa || !rango || rango.ancho <= 0 || rango.alto <= 0) return;
-    const margen = 48;
+    // En pantallas pequeñas el margen se reduce: el contenido llena el lienzo.
+    const margen = Math.min(48, Math.min(etapa.width(), etapa.height()) * 0.08);
     const zoom = Math.min(
       ZOOM_MAX,
       Math.max(
@@ -175,6 +190,8 @@ export function useZoomPan(): UseZoomPanResultado {
     etapaRef,
     contenedorRef,
     aplicarZoom,
+    aplicarZoomEnPunto,
+    desplazarVista,
     acercarAlejar,
     iniciarPan,
     aplicarPan,

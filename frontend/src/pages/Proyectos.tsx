@@ -7,6 +7,7 @@ import {
   obtenerProyectos,
 } from '../api/clienteApi';
 import MiniaturaPlano from '../piezas/MiniaturaPlano';
+import { useConfirmacion } from '../componentes/dialogos/ConfirmacionContexto';
 import type { PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
 
 function formatearFecha(fecha: string): string {
@@ -66,6 +67,7 @@ export default function Proyectos() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const navegar = useNavigate();
+  const confirmar = useConfirmacion();
 
   const seccionCabeceraRef = useRef<HTMLDivElement>(null);
   const listaRef = useRef<HTMLUListElement>(null);
@@ -141,7 +143,12 @@ export default function Proyectos() {
   }
 
   async function manejarEliminacion(id: string): Promise<void> {
-    const confirmado = window.confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.');
+    const confirmado = await confirmar({
+      titulo: 'Eliminar el proyecto',
+      mensaje: 'Se borrarán el plano y todas sus piezas. Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar proyecto',
+      peligro: true,
+    });
     if (!confirmado) {
       return;
     }
@@ -157,7 +164,7 @@ export default function Proyectos() {
     <div className="pantalla">
       <section className="seccion-proyectos">
         <div className="seccion-titulo" ref={seccionCabeceraRef}>
-          <h2>Mis proyectos</h2>
+          <h2>Proyectos</h2>
           {proyectos.length > 0 && (
             <span className="subtitulo-contador">
               {proyectos.length} {proyectos.length === 1 ? 'proyecto' : 'proyectos'}

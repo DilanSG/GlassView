@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   calcularDespiecePiezas,
   generarPiezasPreset,
+  listarPiezasPersonalizadas,
   obtenerCatalogoVentaneria,
   obtenerPerfilesVentaneria,
 } from '../api/clienteApi';
@@ -9,11 +10,14 @@ import LienzoPlano from './LienzoPlano';
 import IconoAccion from './IconoAccion';
 import PanelPiezas from './PanelPiezas';
 import PanelDespiece from '../componentes/despiece/PanelDespiece';
+import AvisoOrientacion from '../componentes/lienzo/AvisoOrientacion';
+import MiniaturaPlano from '../piezas/MiniaturaPlano';
 import { exportarPlanoPdf } from '../pdf/exportarPlanoPdf';
 import type {
   DespiecePiezas,
   ModeloVentaneria,
   PerfilVentaneria,
+  PiezaPersonalizada,
   PiezaPlano,
   Proyecto,
 } from '../tipos';
@@ -46,6 +50,7 @@ export default function DisenoProyecto({
   const [modo, setModo] = useState<ModoEditor>(modoInicial);
   const [modelos, setModelos] = useState<ModeloVentaneria[]>([]);
   const [perfiles, setPerfiles] = useState<PerfilVentaneria[]>([]);
+  const [piezasPersonalizadas, setPiezasPersonalizadas] = useState<PiezaPersonalizada[]>([]);
   const [piezas, setPiezas] = useState<PiezaPlano[]>(proyecto.piezas);
   const [piezaSeleccionadaId, setPiezaSeleccionadaId] = useState<string | null>(null);
   const [despiece, setDespiece] = useState<DespiecePiezas | null>(null);
@@ -60,6 +65,9 @@ export default function DisenoProyecto({
   const piezasRef = useRef<PiezaPlano[]>(proyecto.piezas);
   const esSucioRef = useRef(false);
   const guardandoRef = useRef(false);
+  const historialRef = useRef<PiezaPlano[][]>([]);
+  const gestoHistorialRef = useRef(false);
+  const [puedeDeshacer, setPuedeDeshacer] = useState(false);
 
   useEffect(() => {
     obtenerCatalogoVentaneria()
@@ -72,6 +80,11 @@ export default function DisenoProyecto({
       .catch(() => {
         // Los perfiles no son críticos para mostrar el proyecto.
       });
+    listarPiezasPersonalizadas()
+      .then(setPiezasPersonalizadas)
+      .catch(() => {
+        // La biblioteca de piezas propias tampoco es crítica al abrir el editor.
+      });
   }, []);
 
   useEffect(() => {
@@ -83,19 +96,37 @@ export default function DisenoProyecto({
 
   /** Abre o cierra la pantalla completa nativa del editor. */
   async function alternarPantallaCompleta(): Promise<void> {
+    const orientacion = screen.orientation as
+      | (ScreenOrientation & { lock?: (modo: string) => Promise<void>; unlock?: () => void })
+      | undefined;
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
+        orientacion?.unlock?.();
       } else {
         await contenedorRef.current?.requestFullscreen();
+        // En móviles, la pantalla completa permite bloquear el horizontal.
+        await orientacion?.lock?.('landscape');
       }
     } catch {
-      // Si el navegador bloquea la pantalla completa, la edición continúa.
+      // Si el navegador bloquea la pantalla completa o el giro, la edición continúa.
     }
   }
 
-  /** Actualiza las piezas al instante (sin tocar el servidor). */
+  /**
+   * Actualiza las piezas al instante (sin tocar el servidor). El historial se
+   * llena una sola vez por gesto: el primer cambio guarda el estado previo y
+   * los siguientes del mismo gesto (arrastre, tipeo) no lo repiten.
+   */
   function cambiarPiezas(nuevas: PiezaPlano[]): void {
+    if (!gestoHistorialRef.current) {
+      historialRef.current.push(piezasRef.current);
+      if (historialRef.current.length > 60) {
+        historialRef.current.shift();
+      }
+      gestoHistorialRef.current = true;
+      setPuedeDeshacer(true);
+    }
     esSucioRef.current = true;
     piezasRef.current = nuevas;
     setPiezas(nuevas);
@@ -108,6 +139,7 @@ export default function DisenoProyecto({
    * última versión (coalescencia), evitando respuestas fuera de orden.
    */
   async function guardarPiezas(): Promise<void> {
+    gestoHistorialRef.current = false;
     if (guardandoRef.current) {
       return;
     }
@@ -131,6 +163,48 @@ export default function DisenoProyecto({
       guardandoRef.current = false;
     }
   }
+
+  /** Devuelve el plano al estado anterior a la última edición. */
+  function deshacer(): void {
+    const anterior = historialRef.current.pop();
+    if (!anterior) {
+      return;
+    }
+    gestoHistorialRef.current = false;
+    piezasRef.current = anterior;
+    setPiezas(anterior);
+    esSucioRef.current = true;
+    setEstadoGuardado('conCambios');
+    setPuedeDeshacer(historialRef.current.length > 0);
+    void guardarPiezas();
+  }
+
+  useEffect(() => {
+    historialRef.current = [];
+    gestoHistorialRef.current = false;
+    setPuedeDeshacer(false);
+  }, [proyecto._id]);
+
+  useEffect(() => {
+    function manejarTecla(evento: KeyboardEvent): void {
+      if (modo === 'vista' || !(evento.ctrlKey || evento.metaKey)) return;
+      if (evento.shiftKey || evento.altKey || evento.key.toLowerCase() !== 'z') return;
+      const objetivo = evento.target as HTMLElement | null;
+      if (
+        objetivo &&
+        (objetivo.tagName === 'INPUT' ||
+          objetivo.tagName === 'TEXTAREA' ||
+          objetivo.isContentEditable)
+      ) {
+        return;
+      }
+      evento.preventDefault();
+      deshacer();
+    }
+    window.addEventListener('keydown', manejarTecla);
+    return () => window.removeEventListener('keydown', manejarTecla);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo]);
 
   useEffect(() => {
     // Si no hay ediciones pendientes, las piezas locales siguen al proyecto
@@ -225,9 +299,13 @@ export default function DisenoProyecto({
     }
   }
 
-  /** Descarga el PDF del plano con las piezas y cotas actuales. */
+  /** Descarga el PDF del plano con las piezas, cotas, despiece y montaje. */
   function descargarPlano(): void {
-    exportarPlanoPdf(piezas, piezaSeleccionada, proyecto.nombre, perfiles);
+    exportarPlanoPdf(piezas, piezaSeleccionada, proyecto.nombre, perfiles, {
+      cliente: proyecto.cliente,
+      direccion: proyecto.direccion,
+      hueco: proyecto.hueco,
+    });
   }
 
   /** Lienzo a pantalla completa y paneles de piezas/despiece como capas. */
@@ -239,6 +317,7 @@ export default function DisenoProyecto({
           piezas={piezas}
           modelos={modelos}
           perfiles={perfiles}
+          piezasPersonalizadas={piezasPersonalizadas}
           hueco={proyecto.hueco ?? null}
           piezaSeleccionadaId={piezaSeleccionadaId}
           onSeleccionarPieza={setPiezaSeleccionadaId}
@@ -345,6 +424,16 @@ export default function DisenoProyecto({
       <>
         <button
           type="button"
+          className="boton-icono"
+          onClick={deshacer}
+          disabled={!puedeDeshacer}
+          title="Deshacer (Ctrl+Z)"
+          aria-label="Deshacer"
+        >
+          <IconoAccion nombre="deshacer" />
+        </button>
+        <button
+          type="button"
           className={`boton-icono ${panelesVisibles ? 'activo' : ''}`}
           onClick={() => setPanelesVisibles((visibles) => !visibles)}
           title="Piezas y despiece"
@@ -382,7 +471,7 @@ export default function DisenoProyecto({
           <h1>{proyecto.nombre}</h1>
           <span className="editor-hueco">
             {proyecto.hueco
-              ? `Hueco ${proyecto.hueco.anchoCm} × ${proyecto.hueco.altoCm} cm`
+              ? `Ancho ${proyecto.hueco.anchoCm} × altura ${proyecto.hueco.altoCm} cm`
               : 'Mapa libre'}
           </span>
         </div>
@@ -392,6 +481,17 @@ export default function DisenoProyecto({
       {error && <p className="mensaje-error">{error}</p>}
 
       {editorDistribucion()}
+
+      <AvisoOrientacion
+        onIntentarHorizontal={() => void alternarPantallaCompleta()}
+        titulo="El editor de planos se usa en horizontal"
+        mensaje="En horizontal se ve el plano completo y se puede dibujar con precisión. Gira el dispositivo para continuar."
+        preview={
+          piezas.length > 0 || proyecto.hueco ? (
+            <MiniaturaPlano piezas={piezas} perfiles={perfiles} hueco={proyecto.hueco} />
+          ) : undefined
+        }
+      />
     </div>
   );
 }

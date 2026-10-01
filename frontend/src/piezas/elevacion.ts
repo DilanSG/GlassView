@@ -1,6 +1,7 @@
 import type { PiezaPlano } from '../tipos';
 import type { ContextoPiezaResuelto } from './contexto';
 import { definicionDe } from './definiciones';
+import { formaValida, primitivasDeForma } from './formas';
 import type { ContextoElevacion, OrientacionPiezaDibujo, Primitiva } from './tipos';
 
 /**
@@ -12,6 +13,11 @@ export function construirElevacion(
   pieza: PiezaPlano,
   contexto: ContextoPiezaResuelto,
 ): Primitiva[] {
+  // Las piezas personalizadas traen su propia forma y no usan el motor de clases.
+  if (formaValida(pieza.forma)) {
+    return primitivasDeForma(pieza.forma, pieza.anchoCm, pieza.altoCm, pieza.tipo);
+  }
+
   const esHorizontal = pieza.orientacion === 'horizontal';
   const orientacion: OrientacionPiezaDibujo = esHorizontal ? 'horizontal' : 'vertical';
   // El largo recorre el eje de la pieza y el peralte es su ancho de cara; en

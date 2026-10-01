@@ -5,6 +5,7 @@ import {
   eliminarUsuario,
   listarUsuarios,
 } from '../api/clienteApi';
+import { useConfirmacion } from '../componentes/dialogos/ConfirmacionContexto';
 import { useSesion } from '../contextos/SesionContexto';
 import type { DatosUsuarioAdmin, RolUsuario, Usuario } from '../tipos';
 import { aFechaInput, formatearFecha } from '../utils/formato';
@@ -40,6 +41,7 @@ function etiquetaEstado(usuario: Usuario): string {
 
 export default function AdminUsuarios() {
   const { usuario: usuarioActual } = useSesion();
+  const confirmar = useConfirmacion();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -130,9 +132,13 @@ export default function AdminUsuarios() {
   }
 
   async function manejarEliminacion(usuario: Usuario): Promise<void> {
-    const confirmado = window.confirm(
-      `¿Eliminar la cuenta de ${usuario.nombre}? Se borrarán también sus proyectos.`,
-    );
+    const confirmado = await confirmar({
+      titulo: 'Eliminar la cuenta',
+      mensaje: `Se eliminará la cuenta de ${usuario.nombre} (${usuario.email}) y todos sus proyectos. Esta acción no se puede deshacer.`,
+      textoConfirmar: 'Eliminar cuenta',
+      peligro: true,
+      textoExigido: usuario.email,
+    });
     if (!confirmado) {
       return;
     }

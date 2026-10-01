@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Group, Layer, Stage } from 'react-konva';
 import type Konva from 'konva';
 import { useZoomPan } from '../hooks/useZoomPan';
-import type { ModeloVentaneria, PerfilCategoria, PerfilVentaneria, PiezaPlano, HuecoProyecto } from '../tipos';
+import type { ModeloVentaneria, PerfilCategoria, PerfilVentaneria, PiezaPersonalizada, PiezaPlano, HuecoProyecto } from '../tipos';
 import type { HerramientaCad } from '../constantes';
 import type { EstadoGuardado, Interaccion, InteraccionMover, RectanguloNuevo } from '../tipos/lienzo';
 import { MINIMO_SELECCION_PANTALLA, PX_POR_CM, TAMANO_ASA } from '../constantes';
@@ -27,6 +27,7 @@ interface LienzoPlanoProps {
   piezas: PiezaPlano[];
   modelos: ModeloVentaneria[];
   perfiles: PerfilVentaneria[];
+  piezasPersonalizadas?: PiezaPersonalizada[];
   /** Medidas del hueco de obra; null/ausente = mapa libre. */
   hueco?: HuecoProyecto | null;
   piezaSeleccionadaId: string | null;
@@ -63,10 +64,14 @@ const TEXTO_ESTADO_GUARDADO: Record<EstadoGuardado, string> = {
   error: 'Error al guardar',
 };
 
+/** Píxeles que hay que mover el dedo para que un toque se convierta en arrastre. */
+const UMBRAL_ARRASTRE = 6;
+
 export default function LienzoPlano({
   piezas,
   modelos,
   perfiles,
+  piezasPersonalizadas = [],
   hueco,
   piezaSeleccionadaId,
   onSeleccionarPieza,
@@ -83,6 +88,7 @@ export default function LienzoPlano({
   const [herramienta, setHerramienta] = useState<string>('seleccion');
   const [barraExpandida, setBarraExpandida] = useState(false);
   const [presetsAbierto, setPresetsAbierto] = useState(false);
+  const [piezasAbierto, setPiezasAbierto] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [rectPreview, setRectPreview] = useState<RectanguloNuevo | null>(null);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
@@ -108,6 +114,8 @@ export default function LienzoPlano({
     etapaRef,
     contenedorRef,
     aplicarZoom,
+    aplicarZoomEnPunto,
+    desplazarVista,
     acercarAlejar,
     iniciarPan,
     aplicarPan,
@@ -115,10 +123,17 @@ export default function LienzoPlano({
     encuadrar,
   } = useZoomPan();
   const mundoRef = useRef<Konva.Group>(null);
-  const encuadradoRef = useRef(false);
+  /** true en cuanto el usuario mueve o hace zoom: el encuadre deja de reajustarse. */
+  const usuarioAjustoVistaRef = useRef(false);
   const inicioRef = useRef<{ x: number; y: number } | null>(null);
   const interaccionRef = useRef<Interaccion | null>(null);
   const clicPresetRef = useRef<{ x: number; y: number } | null>(null);
+  /** Posición de pantalla de cada puntero activo (para la pinza de dos dedos). */
+  const punterosRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  /** Última medida de la pinza: distancia y centro entre dos dedos. */
+  const pinzaRef = useRef<{ distancia: number; centro: { x: number; y: number } } | null>(null);
+  /** Punto de pantalla donde empezó el paneo (para distinguir toque de arrastre). */
+  const panPantallaInicioRef = useRef<{ x: number; y: number } | null>(null);
 
   const colorFondo = obtenerColorVar('--bg-secondary', '#ebebef');
   const colorBorde = obtenerColorVar('--border-strong', '#aeaeb2');
@@ -234,17 +249,36 @@ export default function LienzoPlano({
   }
 
   function encuadrarVista(): void {
+    usuarioAjustoVistaRef.current = true;
     encuadrar(rangoInicial());
   }
 
+  /** Zoom del usuario (botones o rueda): fija la vista y detiene el reencuadre. */
+  function ajustarZoomVista(factor: number): void {
+    usuarioAjustoVistaRef.current = true;
+    aplicarZoom(factor);
+  }
+
+  function rodarZoom(evento: Konva.KonvaEventObject<WheelEvent>): void {
+    usuarioAjustoVistaRef.current = true;
+    acercarAlejar(evento);
+  }
+
+  /** Comienza un paneo del usuario (mano o pinza). */
+  function iniciarPaneo(pantalla: { x: number; y: number }): void {
+    usuarioAjustoVistaRef.current = true;
+    panPantallaInicioRef.current = pantalla;
+    iniciarPan(pantalla);
+  }
+
   useEffect(() => {
-    // Al abrir un plano se encuadra una sola vez (el hueco o el contenido)
-    // para aprovechar toda la pantalla; después manda el zoom del usuario.
-    if (encuadradoRef.current || !tamanoMedido) return;
+    // El primer encuadre se reajusta con cada medición del lienzo (barras del
+    // navegador, paneles…) hasta que el usuario mueve o hace zoom: así el plano
+    // abre siempre centrado y a la escala correcta en el móvil.
+    if (!tamanoMedido || usuarioAjustoVistaRef.current) return;
     const rango = rangoInicial();
     if (!rango) return;
     encuadrar(rango);
-    encuadradoRef.current = true;
   }, [piezas, hueco, tamanoVista, tamanoMedido, encuadrar]);
 
   const resultados = useMemo(() => {
@@ -280,13 +314,27 @@ export default function LienzoPlano({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piezaSeleccionadaId, piezas, idsSeleccionadas]);
 
-  function puntoRelativo(): { x: number; y: number } | null {
-    return mundoRef.current?.getRelativePointerPosition() ?? null;
+  /** Punto del mundo (cm del lienzo) bajo el puntero del evento. */
+  function puntoRelativo(evento?: Konva.KonvaEventObject<PointerEvent>): { x: number; y: number } | null {
+    const pantalla = evento ? puntoPantalla(evento) : etapaRef.current?.getPointerPosition() ?? null;
+    if (!pantalla) {
+      return mundoRef.current?.getRelativePointerPosition() ?? null;
+    }
+    return {
+      x: (pantalla.x - vista.x) / vista.zoom,
+      y: (pantalla.y - vista.y) / vista.zoom,
+    };
   }
 
   /** Posición del puntero en coordenadas de pantalla (para desplazar la vista). */
-  function puntoPantalla(): { x: number; y: number } | null {
-    return etapaRef.current?.getPointerPosition() ?? null;
+  function puntoPantalla(evento?: Konva.KonvaEventObject<PointerEvent>): { x: number; y: number } | null {
+    const etapa = etapaRef.current;
+    if (!etapa) return null;
+    if (evento) {
+      const caja = etapa.container().getBoundingClientRect();
+      return { x: evento.evt.clientX - caja.left, y: evento.evt.clientY - caja.top };
+    }
+    return etapa.getPointerPosition() ?? null;
   }
 
   interface ObjetivoPlano {
@@ -353,19 +401,68 @@ export default function LienzoPlano({
   }
 
   /** Captura el puntero para que el arrastre no se corte al salir del lienzo. */
-  function capturarPuntero(evento: Konva.KonvaEventObject<MouseEvent>): void {
+  function capturarPuntero(evento: Konva.KonvaEventObject<PointerEvent>): void {
     try {
-      const idPuntero = (evento.evt as PointerEvent).pointerId;
+      const idPuntero = evento.evt.pointerId;
       etapaRef.current?.getContent().setPointerCapture(idPuntero);
     } catch {
       // La captura ya estaba tomada o no es compatible: se ignora.
     }
   }
 
-  function liberarPuntero(evento: Konva.KonvaEventObject<MouseEvent>): void {
+  /** Guarda la posición en pantalla de cada puntero activo. */
+  function registrarPuntero(evento: Konva.KonvaEventObject<PointerEvent>): void {
+    const caja = etapaRef.current?.container().getBoundingClientRect();
+    if (!caja) return;
+    punterosRef.current.set(evento.evt.pointerId, {
+      x: evento.evt.clientX - caja.left,
+      y: evento.evt.clientY - caja.top,
+    });
+  }
+
+  function quitarPuntero(evento: Konva.KonvaEventObject<PointerEvent>): void {
+    punterosRef.current.delete(evento.evt.pointerId);
+  }
+
+  /** Distancia y centro entre los dos primeros dedos apoyados. */
+  function medirPinza(): { distancia: number; centro: { x: number; y: number } } | null {
+    const puntos = [...punterosRef.current.values()];
+    if (puntos.length < 2) return null;
+    const [a, b] = puntos;
+    return {
+      distancia: Math.hypot(b.x - a.x, b.y - a.y),
+      centro: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+    };
+  }
+
+  /** Al apoyar el segundo dedo se cancela el gesto de uno y empieza la pinza. */
+  function iniciarPinza(): void {
+    usuarioAjustoVistaRef.current = true;
+    terminarPan();
+    panPantallaInicioRef.current = null;
+    interaccionRef.current = null;
+    inicioRef.current = null;
+    clicPresetRef.current = null;
+    setRectPreview(null);
+    pinzaRef.current = medirPinza();
+  }
+
+  /** Dos dedos: acerca o aleja (distancia) y desplaza la vista (centro). */
+  function aplicarPinza(): void {
+    const anterior = pinzaRef.current;
+    const actual = medirPinza();
+    if (!anterior || !actual) return;
+    if (anterior.distancia > 8 && actual.distancia > 8) {
+      aplicarZoomEnPunto(actual.distancia / anterior.distancia, actual.centro);
+    }
+    desplazarVista(actual.centro.x - anterior.centro.x, actual.centro.y - anterior.centro.y);
+    pinzaRef.current = actual;
+  }
+
+  function liberarPuntero(evento: Konva.KonvaEventObject<PointerEvent>): void {
     try {
       const contenido = etapaRef.current?.getContent();
-      const idPuntero = (evento.evt as PointerEvent).pointerId;
+      const idPuntero = evento.evt.pointerId;
       if (contenido?.hasPointerCapture(idPuntero)) {
         contenido.releasePointerCapture(idPuntero);
       }
@@ -378,6 +475,7 @@ export default function LienzoPlano({
     idPieza: string,
     ids: string[],
     punto: { x: number; y: number },
+    pantalla: { x: number; y: number },
   ): InteraccionMover | null {
     const pieza = piezas.find((p) => p.id === idPieza);
     if (!pieza) return null;
@@ -395,20 +493,30 @@ export default function LienzoPlano({
       desplazamientoX: pieza.x * PX_POR_CM - punto.x,
       desplazamientoY: pieza.y * PX_POR_CM - punto.y,
       origenPiezas,
+      pantalla0: pantalla,
+      movido: false,
     };
   }
 
-  function alPresionarRaton(evento: Konva.KonvaEventObject<MouseEvent>): void {
+  function alPresionarRaton(evento: Konva.KonvaEventObject<PointerEvent>): void {
     capturarPuntero(evento);
-    const punto = puntoRelativo();
+    registrarPuntero(evento);
+
+    // Dos dedos: pinza para acercar/alejar y desplazar a la vez.
+    if (punterosRef.current.size >= 2) {
+      iniciarPinza();
+      return;
+    }
+
+    const punto = puntoRelativo(evento);
     if (!punto) return;
+    const pantalla = puntoPantalla(evento);
 
     // Herramienta de desplazar plano: arrastrar mueve la vista (no selecciona).
     // Se usa la posición de pantalla para que el plano siga al cursor 1:1.
     if (herramienta === 'mano') {
-      const pantalla = puntoPantalla();
       if (pantalla) {
-        iniciarPan(pantalla);
+        iniciarPaneo(pantalla);
       }
       return;
     }
@@ -419,10 +527,10 @@ export default function LienzoPlano({
     const idPieza = objetivo?.idPieza ?? null;
     if (herramienta !== 'seleccion' && idPieza) {
       const pieza = piezas.find((p) => p.id === idPieza);
-      if (!pieza) return;
+      if (!pieza || !pantalla) return;
       setHerramienta('seleccion');
       setIdsSeleccionadas([]);
-      const movimiento = crearInteraccionMover(idPieza, [idPieza], punto);
+      const movimiento = crearInteraccionMover(idPieza, [idPieza], punto, pantalla);
       if (!movimiento) return;
       interaccionRef.current = movimiento;
       onSeleccionarPieza(idPieza);
@@ -449,24 +557,27 @@ export default function LienzoPlano({
           y: pieza.y,
           ancho0: pieza.anchoCm,
           alto0: pieza.altoCm,
+          pantalla0: pantalla ?? { x: 0, y: 0 },
+          movido: false,
         };
         onSeleccionarPieza(idPieza);
       } else if (idPieza) {
         const pieza = piezas.find((p) => p.id === idPieza);
-        if (!pieza) return;
+        if (!pieza || !pantalla) return;
         if (idsSeleccionadas.length > 0 && idsSeleccionadas.includes(idPieza)) {
-          const movimiento = crearInteraccionMover(idPieza, idsSeleccionadas, punto);
+          const movimiento = crearInteraccionMover(idPieza, idsSeleccionadas, punto, pantalla);
           if (!movimiento) return;
           interaccionRef.current = movimiento;
           onSeleccionarPieza(idPieza);
           return;
         }
-        const movimiento = crearInteraccionMover(idPieza, [idPieza], punto);
+        const movimiento = crearInteraccionMover(idPieza, [idPieza], punto, pantalla);
         if (!movimiento) return;
         interaccionRef.current = movimiento;
         onSeleccionarPieza(idPieza);
         setIdsSeleccionadas([]);
       } else {
+        // El rectángulo de selección múltiple se dibuja siempre sobre el vacío.
         inicioRef.current = { x: punto.x, y: punto.y };
         setRectPreview({ x: punto.x, y: punto.y, ancho: 0, alto: 0 });
       }
@@ -491,11 +602,17 @@ export default function LienzoPlano({
     setRectPreview({ x, y, ancho: 0, alto: 0 });
   }
 
-  function alMoverRaton(): void {
-    const pantalla = puntoPantalla();
+  function alMoverRaton(evento: Konva.KonvaEventObject<PointerEvent>): void {
+    registrarPuntero(evento);
+    if (pinzaRef.current && punterosRef.current.size >= 2) {
+      aplicarPinza();
+      return;
+    }
+
+    const pantalla = puntoPantalla(evento);
     if (pantalla && aplicarPan(pantalla)) return;
 
-    const punto = puntoRelativo();
+    const punto = puntoRelativo(evento);
     if (!punto) return;
 
     if (rectPreview && inicioRef.current) {
@@ -506,12 +623,28 @@ export default function LienzoPlano({
         ancho: Math.abs(redondearAPx(punto.x, PX_POR_CM) - origen.x),
         alto: Math.abs(redondearAPx(punto.y, PX_POR_CM) - origen.y),
       };
-      setRectPreview(limitarRect(candidato));
+      // Fuera del hueco el rectángulo queda vacío: se conserva el último
+      // válido en vez de cancelar el gesto (el trazo puede volver al vano).
+      const limitado = limitarRect(candidato);
+      if (limitado) {
+        setRectPreview(limitado);
+      }
       return;
     }
 
     const interaccion = interaccionRef.current;
     if (!interaccion) return;
+
+    // Un toque sin arrastre no mueve nada: hace falta superar el umbral.
+    if (!interaccion.movido) {
+      if (!pantalla) return;
+      const recorrido = Math.hypot(
+        pantalla.x - interaccion.pantalla0.x,
+        pantalla.y - interaccion.pantalla0.y,
+      );
+      if (recorrido < UMBRAL_ARRASTRE) return;
+      interaccion.movido = true;
+    }
 
     if (interaccion.tipo === 'mover') {
       // Arrastre exacto 1:1 con el cursor. Cada pieza se posiciona desde su
@@ -616,11 +749,32 @@ export default function LienzoPlano({
     );
   }
 
-  async function alSoltarRaton(evento: Konva.KonvaEventObject<MouseEvent>): Promise<void> {
+  async function alSoltarRaton(evento: Konva.KonvaEventObject<PointerEvent>): Promise<void> {
     liberarPuntero(evento);
-    if (terminarPan()) return;
+    quitarPuntero(evento);
+    if (punterosRef.current.size < 2) {
+      pinzaRef.current = null;
+    }
 
-    const habiaInteraccion = interaccionRef.current !== null;
+    if (terminarPan()) {
+      const inicioPan = panPantallaInicioRef.current;
+      const fin = puntoPantalla(evento);
+      panPantallaInicioRef.current = null;
+      // Un toque sin arrastre sobre el plano vacío quita la selección.
+      if (
+        inicioPan &&
+        fin &&
+        Math.hypot(fin.x - inicioPan.x, fin.y - inicioPan.y) < UMBRAL_ARRASTRE
+      ) {
+        onSeleccionarPieza(null);
+        setIdsSeleccionadas([]);
+      }
+      return;
+    }
+    panPantallaInicioRef.current = null;
+
+    const interaccion = interaccionRef.current;
+    const huboMovimiento = interaccion?.movido === true;
 
     if (herramienta.startsWith('preset-')) {
       const punto = clicPresetRef.current;
@@ -672,6 +826,38 @@ export default function LienzoPlano({
         return;
       }
 
+      if (herramienta.startsWith('custom-')) {
+        const personalizada = piezasPersonalizadas.find(
+          (item) => `custom-${item._id}` === herramienta,
+        );
+        if (!personalizada) return;
+        const esPunto = personalizada.tipo === 'herraje';
+        const esHorizontal = rect.ancho >= rect.alto;
+        const largo = Math.max(rect.ancho, rect.alto) / PX_POR_CM;
+        const grosor = Math.max(0.5, Math.min(rect.ancho, rect.alto) / PX_POR_CM);
+        const pieza: PiezaPlano = {
+          id: `pieza-${Date.now()}`,
+          tipo: personalizada.tipo,
+          ref: personalizada.ref,
+          descripcion: personalizada.nombre,
+          x: rect.x / PX_POR_CM,
+          y: rect.y / PX_POR_CM,
+          largoCm: esPunto ? 0 : largo,
+          anchoCm: esPunto ? 3 : esHorizontal ? largo : grosor,
+          altoCm: esPunto ? 3 : esHorizontal ? grosor : largo,
+          orientacion: esPunto ? 'punto' : esHorizontal ? 'horizontal' : 'vertical',
+          espesorMm: personalizada.espesorMm ?? 4,
+          cantidad: 1,
+          forma: personalizada.forma,
+        };
+        if (personalizada.tipo === 'vidrio' || personalizada.tipo === 'acrilico') {
+          pieza.anchoCm = rect.ancho / PX_POR_CM;
+          pieza.altoCm = rect.alto / PX_POR_CM;
+        }
+        await onPiezaDibujada(pieza);
+        return;
+      }
+
       const cad = herramienta as HerramientaCad;
       const categoria = categoriaDeHerramienta(cad);
       const esPunto = categoria === 'rodachina' || categoria === 'manija';
@@ -713,7 +899,7 @@ export default function LienzoPlano({
     }
 
     interaccionRef.current = null;
-    if (habiaInteraccion) {
+    if (huboMovimiento) {
       onGuardarCambios();
     }
   }
@@ -754,21 +940,32 @@ export default function LienzoPlano({
           herramienta={herramienta}
           barraExpandida={barraExpandida}
           presetsAbierto={presetsAbierto}
+          piezasAbierto={piezasAbierto}
           ayudaAbierta={ayudaAbierta}
           modelos={modelos}
+          piezasPersonalizadas={piezasPersonalizadas}
           onCambiarHerramienta={setHerramienta}
           onAlternarBarra={() => setBarraExpandida((antes) => !antes)}
           onAlternarPresets={() => {
             setPresetsAbierto((antes) => !antes);
             setBarraExpandida(true);
           }}
+          onAlternarPiezas={() => {
+            setPiezasAbierto((antes) => !antes);
+            setBarraExpandida(true);
+          }}
           onAlternarAyuda={() => setAyudaAbierta((abierta) => !abierta)}
         />
       )}
 
-      <div className="lienzo-scroll" ref={contenedorRef}>
+      <div
+        className="lienzo-scroll"
+        ref={contenedorRef}
+        data-vista={JSON.stringify(vista)}
+        data-rect={JSON.stringify(rectPreview)}
+      >
         <ControlesZoom
-          aplicarZoom={aplicarZoom}
+          aplicarZoom={ajustarZoomVista}
           enPantallaCompleta={enPantallaCompleta}
           onAbrirPantallaCompleta={onAbrirPantallaCompleta}
           onEncuadrar={encuadrarVista}
@@ -777,11 +974,11 @@ export default function LienzoPlano({
           ref={etapaRef}
           width={tamanoVista.ancho}
           height={tamanoVista.alto}
-          onWheel={acercarAlejar}
-          onMouseDown={alPresionarRaton}
-          onMouseMove={alMoverRaton}
-          onMouseUp={alSoltarRaton}
-          onMouseLeave={alSoltarRaton}
+          onWheel={rodarZoom}
+          onPointerDown={alPresionarRaton}
+          onPointerMove={alMoverRaton}
+          onPointerUp={alSoltarRaton}
+          onPointerLeave={alSoltarRaton}
         >
           <Layer>
             <Group

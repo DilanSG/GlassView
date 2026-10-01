@@ -795,6 +795,150 @@ export const especificacionApi = {
         },
       },
     },
+    '/piezas-personalizadas': {
+      get: {
+        tags: ['Piezas personalizadas'],
+        summary: 'Lista las piezas propias y las públicas de otras cuentas',
+        responses: {
+          '200': {
+            description: 'Piezas cargadas',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+                example: {
+                  exito: true,
+                  datos: [
+                    {
+                      _id: '65f0a1b2c3d4e5f6a7b8c9d0',
+                      nombre: 'Perfil decorativo',
+                      ref: 'CUS-8F2A',
+                      tipo: 'perfil',
+                      categoria: 'jamba',
+                      publico: true,
+                      forma: {
+                        anchoCm: 20,
+                        altoCm: 20,
+                        trazos: [
+                          { rol: 'contorno', puntos: [{ x: 2, y: 2 }, { x: 18, y: 2 }, { x: 18, y: 18 }, { x: 2, y: 18 }] },
+                          { rol: 'vacio', puntos: [{ x: 8, y: 8 }, { x: 12, y: 8 }, { x: 12, y: 12 }, { x: 8, y: 12 }] },
+                        ],
+                      },
+                    },
+                  ],
+                  mensaje: 'Piezas personalizadas cargadas.',
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '402': { $ref: '#/components/responses/PagoRequerido' },
+          '500': { $ref: '#/components/responses/ErrorServidor' },
+        },
+      },
+      post: {
+        tags: ['Piezas personalizadas'],
+        summary: 'Crea una pieza personalizada',
+        description:
+          'La forma se dibuja en un lienzo de diseño y se escala a la pieza cuando se coloca. Si no se envía REF, se genera una.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['nombre', 'forma'],
+                properties: {
+                  nombre: { type: 'string', example: 'Perfil decorativo' },
+                  ref: { type: 'string', example: 'CUS-8F2A' },
+                  tipo: { type: 'string', enum: ['perfil', 'vidrio', 'acrilico', 'herraje'] },
+                  categoria: { type: 'string', example: 'jamba' },
+                  publico: { type: 'boolean', example: false },
+                  forma: { $ref: '#/components/schemas/FormaPieza' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Pieza creada',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '402': { $ref: '#/components/responses/PagoRequerido' },
+        },
+      },
+    },
+    '/piezas-personalizadas/{id}': {
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string' },
+          description: 'Identificador de Mongo de la pieza personalizada',
+          example: '65f0a1b2c3d4e5f6a7b8c9d0',
+        },
+      ],
+      put: {
+        tags: ['Piezas personalizadas'],
+        summary: 'Actualiza una pieza propia',
+        description: 'Solo el dueño puede modificarla; se puede enviar únicamente lo que cambia.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  nombre: { type: 'string' },
+                  ref: { type: 'string' },
+                  tipo: { type: 'string', enum: ['perfil', 'vidrio', 'acrilico', 'herraje'] },
+                  categoria: { type: 'string' },
+                  publico: { type: 'boolean' },
+                  forma: { $ref: '#/components/schemas/FormaPieza' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Pieza actualizada',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/PeticionInvalida' },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '404': { $ref: '#/components/responses/NoEncontrado' },
+          '409': { $ref: '#/components/responses/Conflicto' },
+        },
+      },
+      delete: {
+        tags: ['Piezas personalizadas'],
+        summary: 'Elimina una pieza propia',
+        responses: {
+          '200': {
+            description: 'Pieza eliminada',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RespuestaApi' },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '404': { $ref: '#/components/responses/NoEncontrado' },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: { acceso: autenticacion },
@@ -863,8 +1007,67 @@ export const especificacionApi = {
           espesorMm: { type: 'number', default: 4 },
           cantidad: { type: 'number', default: 1 },
           dePreset: { type: 'boolean', default: false, description: 'true si vino de una plantilla' },
+          forma: {
+            allOf: [{ $ref: '#/components/schemas/FormaPieza' }],
+            description: 'Forma libre; solo en piezas creadas con el editor de formas personalizadas',
+          },
         },
         required: ['id', 'tipo', 'ref'],
+      },
+      FormaPieza: {
+        type: 'object',
+        description: 'Forma libre dibujada por el usuario; los puntos van en cm sobre su lienzo de diseño.',
+        properties: {
+          anchoCm: { type: 'number', example: 20 },
+          altoCm: { type: 'number', example: 20 },
+          color: { type: 'string', description: 'Color del material general de la pieza' },
+          trazos: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                rol: { type: 'string', enum: ['contorno', 'vacio'] },
+                visible: { type: 'boolean', default: true },
+                nombre: { type: 'string', description: 'Nombre de la capa' },
+                puntos: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      x: { type: 'number' },
+                      y: { type: 'number' },
+                    },
+                    required: ['x', 'y'],
+                  },
+                },
+                material: {
+                  type: 'object',
+                  description: 'Material propio de la capa; si falta, usa el de la pieza',
+                  properties: {
+                    nombre: { type: 'string' },
+                    color: { type: 'string' },
+                  },
+                  required: ['nombre', 'color'],
+                },
+              },
+            },
+          },
+        },
+        required: ['anchoCm', 'altoCm', 'trazos'],
+      },
+      PiezaPersonalizada: {
+        type: 'object',
+        description: 'Pieza de la biblioteca del usuario, privada o pública.',
+        properties: {
+          _id: { type: 'string' },
+          nombre: { type: 'string' },
+          ref: { type: 'string' },
+          tipo: { type: 'string', enum: ['perfil', 'vidrio', 'acrilico', 'herraje'] },
+          categoria: { type: 'string' },
+          publico: { type: 'boolean' },
+          forma: { $ref: '#/components/schemas/FormaPieza' },
+        },
+        required: ['_id', 'nombre', 'ref', 'tipo', 'forma'],
       },
       Proyecto: {
         type: 'object',

@@ -9,6 +9,7 @@ import { requiereSuscripcion } from './middleware/requiereSuscripcion.js';
 import authRoutes from './routes/auth.routes.js';
 import catalogoRoutes from './routes/catalogo.routes.js';
 import facturacionRoutes from './routes/facturacion.routes.js';
+import piezasPersonalizadasRoutes from './routes/piezasPersonalizadas.routes.js';
 import proyectosRoutes from './routes/proyectos.routes.js';
 
 export function crearAplicacion(): Express {
@@ -30,6 +31,12 @@ export function crearAplicacion(): Express {
   aplicacion.use('/api/facturacion', facturacionRoutes);
   aplicacion.use('/api/catalogo-ventaneria', autenticar, requiereSuscripcion, catalogoRoutes);
   aplicacion.use('/api/proyectos', autenticar, requiereSuscripcion, proyectosRoutes);
+  aplicacion.use(
+    '/api/piezas-personalizadas',
+    autenticar,
+    requiereSuscripcion,
+    piezasPersonalizadasRoutes,
+  );
 
   aplicacion.use('/api/docs', swaggerUi.serve, swaggerUi.setup(especificacionApi));
 

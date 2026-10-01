@@ -13,6 +13,10 @@ export type InteraccionMover = {
    *  se calcula respecto a ellas (1:1 con el cursor, sin arrastre
    *  compuesto aunque React aún no haya commiteado el estado anterior). */
   origenPiezas: Record<string, { x: number; y: number }>;
+  /** Punto de pantalla donde empezó el gesto (separa toque de arrastre). */
+  pantalla0: { x: number; y: number };
+  /** true cuando el gesto ya superó el umbral de arrastre. */
+  movido: boolean;
 };
 
 export type InteraccionRedimensionar = {
@@ -23,6 +27,8 @@ export type InteraccionRedimensionar = {
   y: number;
   ancho0: number;
   alto0: number;
+  pantalla0: { x: number; y: number };
+  movido: boolean;
 };
 
 export type Interaccion = InteraccionMover | InteraccionRedimensionar;

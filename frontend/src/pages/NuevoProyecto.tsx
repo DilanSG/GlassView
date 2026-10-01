@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   actualizarProyecto,
   crearProyecto,
   generarPiezasPreset,
   obtenerCatalogoVentaneria,
+  obtenerPerfilesVentaneria,
 } from '../api/clienteApi';
 import DisenoProyecto from '../components/DisenoProyecto';
-import type { HuecoProyecto, ModeloVentaneria, Proyecto } from '../tipos';
+import MiniaturaPlano from '../piezas/MiniaturaPlano';
+import type { HuecoProyecto, ModeloVentaneria, PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
 
 type ModoLienzo = 'hueco' | 'libre';
 
@@ -28,6 +30,9 @@ export default function NuevoProyecto() {
   const [modeloId, setModeloId] = useState('');
   const [anchoPlantilla, setAnchoPlantilla] = useState('100');
   const [altoPlantilla, setAltoPlantilla] = useState('140');
+  const [perfiles, setPerfiles] = useState<PerfilVentaneria[]>([]);
+  const [piezasPreview, setPiezasPreview] = useState<PiezaPlano[] | null>(null);
+  const [generandoPreview, setGenerandoPreview] = useState(false);
   const [proyecto, setProyecto] = useState<Proyecto | null>(null);
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState('');
@@ -36,24 +41,72 @@ export default function NuevoProyecto() {
     obtenerCatalogoVentaneria()
       .then(setModelos)
       .catch(() => setModelos([]));
+    obtenerPerfilesVentaneria()
+      .then(setPerfiles)
+      .catch(() => setPerfiles([]));
   }, []);
 
-  // Vista previa del hueco, escalada para que quepa en el panel.
-  const vistaHueco = useMemo(() => {
-    const ancho = medidaDeTexto(huecoAncho);
-    const alto = medidaDeTexto(huecoAlto);
-    if (!ancho || !alto) {
+  // Medidas de la vista previa: las del hueco o las de la plantilla en mapa libre.
+  const medidasPreview = useMemo(() => {
+    if (modo === 'hueco') {
+      const ancho = medidaDeTexto(huecoAncho);
+      const alto = medidaDeTexto(huecoAlto);
+      return ancho && alto ? { ancho, alto } : null;
+    }
+    const ancho = medidaDeTexto(anchoPlantilla);
+    const alto = medidaDeTexto(altoPlantilla);
+    return ancho && alto ? { ancho, alto } : null;
+  }, [modo, huecoAncho, huecoAlto, anchoPlantilla, altoPlantilla]);
+
+  // Vista previa escalada para que quepa en la tarjeta.
+  const vistaPreview = useMemo(() => {
+    if (!medidasPreview) {
       return null;
     }
-    const escala = Math.min(300 / ancho, 220 / alto, 2.2);
+    const escala = Math.min(360 / medidasPreview.ancho, 300 / medidasPreview.alto, 3.2);
     return {
-      ancho: Math.max(28, ancho * escala),
-      alto: Math.max(28, alto * escala),
-      real: { ancho, alto },
+      ancho: Math.max(28, medidasPreview.ancho * escala),
+      alto: Math.max(28, medidasPreview.alto * escala),
+      real: medidasPreview,
     };
-  }, [huecoAncho, huecoAlto]);
+  }, [medidasPreview]);
+
+  // La plantilla elegida se dibuja en la vista previa con sus piezas reales.
+  useEffect(() => {
+    if (!modeloId || !medidasPreview) {
+      setPiezasPreview(null);
+      setGenerandoPreview(false);
+      return;
+    }
+    let vigente = true;
+    const temporizador = window.setTimeout(() => {
+      setGenerandoPreview(true);
+      generarPiezasPreset(modeloId, medidasPreview.ancho, medidasPreview.alto)
+        .then((piezas) => {
+          if (vigente) setPiezasPreview(piezas);
+        })
+        .catch(() => {
+          if (vigente) setPiezasPreview(null);
+        })
+        .finally(() => {
+          if (vigente) setGenerandoPreview(false);
+        });
+    }, 250);
+    return () => {
+      vigente = false;
+      window.clearTimeout(temporizador);
+    };
+  }, [modeloId, medidasPreview]);
 
   const modeloElegido = modelos.find((modelo) => modelo.id === modeloId) ?? null;
+
+  // La vista previa se adapta al ancho disponible manteniendo su proporción.
+  const estiloPreview = vistaPreview
+    ? ({
+        '--ancho-preview': `${vistaPreview.ancho}px`,
+        '--ratio-preview': `${vistaPreview.real.ancho} / ${vistaPreview.real.alto}`,
+      } as CSSProperties)
+    : undefined;
 
   function manejarCambioModelo(id: string): void {
     setModeloId(id);
@@ -142,56 +195,83 @@ export default function NuevoProyecto() {
 
   return (
     <div className="pantalla">
-      <header className="cabecera-editor">
-        <h1>Nuevo proyecto</h1>
+      <header className="pagina-cabecera">
+        <h2>Nuevo proyecto</h2>
+        <p>
+          Define las medidas del hueco y, si quieres, parte de una plantilla de ventanería. El
+          plano se abrirá listo para dibujar.
+        </p>
       </header>
 
-      <div className="editor-distribucion">
-        <div className="area-dibujo">
-          <div className="vista-lienzo">
-            {modo === 'hueco' ? (
-              vistaHueco ? (
-                <>
-                  <div
-                    className="vista-hueco"
-                    style={{ width: `${vistaHueco.ancho}px`, height: `${vistaHueco.alto}px` }}
-                  >
-                    <span>
-                      {vistaHueco.real.ancho} × {vistaHueco.real.alto} cm
-                    </span>
-                  </div>
-                  <p className="vista-lienzo-pie">
-                    {modeloElegido
-                      ? `La plantilla «${modeloElegido.nombre}» se creará al tamaño del hueco.`
-                      : 'El lienzo se creará con el tamaño del hueco.'}
-                  </p>
-                </>
+      <div className="nuevo-proyecto">
+        <section className="tarjeta-lienzo" aria-label="Vista previa del lienzo">
+          <header className="tarjeta-lienzo-cabecera">
+            <span className="tarjeta-lienzo-titulo">Vista previa</span>
+            {vistaPreview && (
+              <span className="tarjeta-lienzo-medidas">
+                {vistaPreview.real.ancho} × {vistaPreview.real.alto} cm
+              </span>
+            )}
+          </header>
+
+          <div className={`vista-lienzo ${generandoPreview ? 'generando' : ''}`}>
+            {vistaPreview ? (
+              piezasPreview ? (
+                <div className="vista-plantilla" style={estiloPreview}>
+                  <MiniaturaPlano
+                    piezas={piezasPreview}
+                    perfiles={perfiles}
+                    hueco={
+                      modo === 'hueco'
+                        ? {
+                            anchoCm: vistaPreview.real.ancho,
+                            altoCm: vistaPreview.real.alto,
+                          }
+                        : null
+                    }
+                  />
+                </div>
+              ) : modo === 'hueco' ? (
+                <div className="vista-hueco" style={estiloPreview}>
+                  <span>
+                    {vistaPreview.real.ancho} × {vistaPreview.real.alto} cm
+                  </span>
+                </div>
               ) : (
                 <p className="aviso-lienzo">
-                  Indica el ancho y el alto del hueco para ver la vista previa.
+                  Mapa libre: lienzo infinito con rejilla en centímetros.
                 </p>
               )
             ) : (
               <p className="aviso-lienzo">
-                Mapa libre: lienzo infinito con rejilla en centímetros.
-                {modeloElegido
-                  ? ` La plantilla «${modeloElegido.nombre}» se creará con las medidas que indiques.`
-                  : ''}
+                {modo === 'hueco'
+                  ? 'Indica el ancho y el alto del hueco para ver la vista previa.'
+                  : 'Indica el ancho y el alto de la plantilla para ver la vista previa.'}
               </p>
             )}
           </div>
-        </div>
 
-        <aside className="panel-nuevo-proyecto">
-          <h2>Datos del proyecto</h2>
-          <form onSubmit={manejarCreacion}>
+          <p className="vista-lienzo-pie">
+            {modo === 'hueco'
+              ? modeloElegido
+                ? `La plantilla «${modeloElegido.nombre}» se creará al tamaño del hueco.`
+                : 'El lienzo se creará con el tamaño del hueco.'
+              : modeloElegido
+                ? `La plantilla «${modeloElegido.nombre}» se creará con las medidas que indiques.`
+                : 'Sin medidas de obra: podrás dibujar en cualquier parte del lienzo.'}
+          </p>
+        </section>
+
+        <form className="nuevo-proyecto-form" onSubmit={manejarCreacion}>
+          <section className="tarjeta-form">
+            <h3>Datos del proyecto</h3>
+
             <label htmlFor="nombre">Nombre del proyecto</label>
             <input
               id="nombre"
               value={nombre}
               onChange={(evento) => setNombre(evento.target.value)}
               placeholder="Ej.: Escalera edificio San Martín"
-              autoFocus
               required
             />
 
@@ -202,8 +282,11 @@ export default function NuevoProyecto() {
               onChange={(evento) => setCliente(evento.target.value)}
               placeholder="Opcional"
             />
+          </section>
 
-            <p className="form-seccion-titulo">Lienzo</p>
+          <section className="tarjeta-form">
+            <h3>Lienzo y plantilla</h3>
+
             <div className="opciones-lienzo" role="radiogroup" aria-label="Tipo de lienzo">
               <button
                 type="button"
@@ -213,7 +296,7 @@ export default function NuevoProyecto() {
                 onClick={() => setModo('hueco')}
               >
                 <strong>Hueco de obra</strong>
-                <span>Medidas reales del vano</span>
+                <span>Medidas reales: ancho × altura</span>
               </button>
               <button
                 type="button"
@@ -302,18 +385,24 @@ export default function NuevoProyecto() {
                 La plantilla se ajustará al hueco de {huecoAncho || '—'} × {huecoAlto || '—'} cm.
               </p>
             )}
+          </section>
 
+          <div className="nuevo-proyecto-acciones">
             {error && (
               <div className="aviso aviso-error" role="alert">
                 {error}
               </div>
             )}
 
-            <button type="submit" className="boton-primario" disabled={creando}>
+            <button
+              type="submit"
+              className="boton-primario boton-crear-proyecto"
+              disabled={creando}
+            >
               {creando ? 'Creando…' : 'Crear y dibujar plano'}
             </button>
-          </form>
-        </aside>
+          </div>
+        </form>
       </div>
     </div>
   );

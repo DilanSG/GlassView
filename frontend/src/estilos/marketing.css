@@ -86,7 +86,7 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 3vw, 3rem);
+  gap: clamp(0.5rem, 1vw, 0.9rem);
   padding-block: clamp(0.7rem, 1.2vw, 1rem);
   padding-inline: clamp(1.25rem, 5vw, 6rem);
   background-color: color-mix(in srgb, var(--bg-primary) 78%, transparent);
@@ -286,7 +286,30 @@
   filter: drop-shadow(0 24px 50px color-mix(in srgb, var(--text-primary) 22%, transparent));
 }
 
+.hero-marca {
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-marca-logo {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
 /* Secciones */
+
+.seccion,
+.seccion-precios,
+.cta-final {
+  /* La barra pública es fija: al saltar a una sección no debe taparla. */
+  scroll-margin-top: 5.5rem;
+}
 
 .seccion {
   width: 100%;
@@ -958,6 +981,33 @@
   color: var(--error);
 }
 
+/* Secciones que solo se muestran dentro del menú en móvil. */
+.menu-usuario-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.45rem;
+  border-bottom: 1px solid var(--linea-fina);
+}
+
+.menu-usuario-enlace.activo {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.menu-usuario-tema {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
 .chip-plan {
   display: inline-block;
   width: fit-content;
@@ -1222,7 +1272,7 @@
 }
 
 @media (max-width: 720px) {
-  .factura-cabecera {
+  .lista-facturas .factura-cabecera {
     display: none;
   }
 
@@ -1291,58 +1341,47 @@
   font-size: 0.8rem;
 }
 
-.panel-perfil {
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background-color: var(--bg-secondary);
-  overflow: hidden;
+/* ── Perfil ──────────────────────────────────────────────────── */
+
+.perfil-distribucion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+  align-items: start;
+  gap: 1.1rem;
 }
 
-.perfil-identidad {
+.perfil-columna {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.tarjeta-perfil {
+  border: 1px solid var(--linea-fina);
+  border-radius: 16px;
+  background-color: var(--bg-secondary);
+  padding: clamp(1.1rem, 2vw, 1.5rem);
+}
+
+.tarjeta-perfil-cabecera {
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 2vw, 1.6rem);
+  justify-content: space-between;
+  gap: 0.7rem;
   flex-wrap: wrap;
-  padding: clamp(1.4rem, 2.4vw, 2rem);
+  margin-bottom: 0.8rem;
 }
 
-.perfil-avatar {
-  width: clamp(52px, 5vw, 64px);
-  height: clamp(52px, 5vw, 64px);
-  border-radius: 50%;
-  background-color: var(--acento);
-  color: var(--acento-texto);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(1.2rem, 2vw, 1.6rem);
-  font-weight: 700;
-  flex-shrink: 0;
+.tarjeta-perfil-cabecera h3 {
+  margin: 0;
+  font-size: 1.05rem;
 }
 
-.perfil-identidad-datos {
-  flex: 1;
-  min-width: 12rem;
-}
-
-.perfil-identidad-datos h3 {
-  margin-top: 0.25rem;
-  font-size: clamp(1.25rem, 2vw, 1.6rem);
-  letter-spacing: -0.02em;
-}
-
-.perfil-identidad-datos p {
-  margin: 0.3rem 0 0;
+.tarjeta-perfil-ayuda {
+  margin: 0 0 1rem;
   color: var(--text-secondary);
   font-size: 0.88rem;
-  overflow-wrap: anywhere;
-}
-
-.perfil-identidad-acciones {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  line-height: 1.5;
 }
 
 .chip-rol {
@@ -1356,21 +1395,118 @@
   color: var(--text-secondary);
 }
 
-.panel-seccion {
-  padding: clamp(1.4rem, 2.4vw, 2rem);
-  border-top: 1px solid var(--linea-fina);
+.cuenta-datos {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
 }
 
-.panel-seccion-cabecera {
-  margin-bottom: clamp(1rem, 1.8vw, 1.4rem);
+.cuenta-datos > div {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: baseline;
 }
 
-.panel-seccion-cabecera p {
+.cuenta-datos dt {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.cuenta-datos dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.plan-descripcion {
+  margin: 0 0 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.plan-progreso {
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--bg-tertiary);
+  overflow: hidden;
+  margin-bottom: 0.45rem;
+}
+
+.plan-progreso span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--text-primary);
+  transition: width 0.3s ease;
+}
+
+.plan-detalle {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.tarjeta-plan .boton-cta {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.tarjeta-peligro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-top: 1.1rem;
+  border-color: color-mix(in srgb, var(--error) 35%, var(--linea-fina));
+}
+
+.tarjeta-peligro > div {
+  flex: 1;
+  min-width: 16rem;
+}
+
+.tarjeta-peligro h3 {
+  margin: 0;
+}
+
+.tarjeta-peligro p {
   margin: 0.35rem 0 0;
   color: var(--text-secondary);
   font-size: 0.88rem;
   line-height: 1.5;
   max-width: 62ch;
+}
+
+/* Diálogo de confirmación (sustituye a window.confirm). */
+.modal-confirmacion {
+  max-width: 430px;
+}
+
+.modal-confirmacion .modal-cabecera {
+  margin-bottom: 0.6rem;
+}
+
+.modal-confirmacion .modal-cabecera p {
+  max-width: none;
+}
+
+.modal-confirmacion .modal-acciones {
+  margin-top: 1.2rem;
+}
+
+@media (max-width: 900px) {
+  .perfil-distribucion {
+    grid-template-columns: 1fr;
+  }
+
+  .cuenta-datos > div {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
 }
 
 .rejilla-campos {
@@ -1383,20 +1519,6 @@
   display: flex;
   justify-content: flex-end;
   margin-top: clamp(1.1rem, 2vw, 1.5rem);
-}
-
-.panel-seccion-peligro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.2rem;
-  flex-wrap: wrap;
-}
-
-.panel-seccion-peligro .panel-seccion-cabecera {
-  flex: 1;
-  min-width: 14rem;
-  margin-bottom: 0;
 }
 
 .tarjeta-formulario {
@@ -1542,6 +1664,27 @@
   .hero {
     grid-template-columns: 1fr;
     min-height: auto;
+    gap: 1.75rem;
+    padding-block: 2.5rem 3rem;
+  }
+
+  .hero-visual::before {
+    display: none;
+  }
+
+  .hero-marca {
+    display: inline-flex;
+  }
+
+  /* En móvil y tablet el hero va sin visual: el logo ya está sobre el título. */
+  .hero-visual {
+    display: none;
+  }
+
+  /* En el home, el logo vive en el hero: la barra pública se queda solo
+     con las acciones para no repetir la marca. */
+  .barra-publica .marca-publica {
+    display: none;
   }
 
   .autenticacion {
@@ -1569,7 +1712,131 @@
     display: none;
   }
 
+  .menu-usuario {
+    margin-left: auto;
+  }
+
+  .boton-usuario {
+    padding: 0.45rem;
+  }
+
+  .menu-usuario-panel {
+    width: min(320px, calc(100vw - 1.5rem));
+    max-height: calc(100vh - 4.5rem);
+    max-height: calc(100dvh - 4.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .hero-contenido {
     max-width: none;
+  }
+}
+
+/* ── Hero de móvil: composición propia, no la de escritorio ──── */
+
+@media (max-width: 720px) {
+  .barra-publica {
+    gap: 0.5rem;
+    padding-block: 0.6rem;
+    padding-inline: 1rem;
+  }
+
+  .marca-publica {
+    font-size: 1.15rem;
+  }
+
+  .acciones-publicas {
+    gap: 0.4rem;
+  }
+
+  .hero {
+    min-height: auto;
+    padding-block: 2rem 2.5rem;
+    padding-inline: 1rem;
+    gap: 1.75rem;
+  }
+
+  .hero::before {
+    display: none;
+  }
+
+  .hero-titulo {
+    font-size: clamp(2rem, 9.5vw, 2.7rem);
+    line-height: 1.06;
+    margin-top: 0.9rem;
+  }
+
+  .hero-texto {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-top: 0.9rem;
+  }
+
+  .hero-acciones {
+    margin-top: 1.4rem;
+  }
+
+  .hero-acciones .boton-cta {
+    width: 100%;
+    padding-block: 0.85rem;
+    font-size: 1rem;
+  }
+
+  .hero-puntos {
+    gap: 0.6rem 1.4rem;
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 460px) {
+  .marca-publica {
+    font-size: 1.05rem;
+  }
+
+  .boton-cta-pequeno {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  /* «Ingresar» pasa a enlace discreto para que quepa todo en una fila. */
+  .boton-publico {
+    background-color: transparent;
+    color: var(--text-secondary);
+    padding: 0.45rem 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .boton-publico:hover {
+    background-color: transparent;
+    color: var(--text-primary);
+  }
+
+  .interruptor-tema-carril {
+    width: 48px;
+    height: 26px;
+  }
+
+  .interruptor-tema-perilla {
+    width: 20px;
+    height: 20px;
+  }
+
+  .interruptor-tema.oscuro .interruptor-tema-perilla {
+    transform: translateX(22px);
+  }
+
+  .interruptor-tema-icono {
+    width: 12px;
+    height: 12px;
+  }
+
+  .interruptor-tema-icono-sol {
+    left: 12px;
+  }
+
+  .interruptor-tema-icono-luna {
+    left: 36px;
   }
 }

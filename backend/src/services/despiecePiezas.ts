@@ -80,7 +80,7 @@ export function calcularDespiecePiezas(piezas: Pieza[]): DespiecePiezas {
       continue;
     }
 
-    if (pieza.tipo === 'rodachina' || pieza.tipo === 'manija') {
+    if (pieza.tipo === 'rodachina' || pieza.tipo === 'manija' || pieza.orientacion === 'punto') {
       const existente = lineasMap.get(pieza.ref);
       if (existente) {
         existente.cantidad += pieza.cantidad;

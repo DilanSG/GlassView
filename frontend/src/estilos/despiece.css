@@ -415,10 +415,44 @@
   .editor-distribucion {
     flex-direction: column;
   }
+}
 
-  .panel-nuevo-proyecto {
-    position: static;
-    width: 100%;
+@media (max-width: 720px) {
+  .panel-lateral {
+    width: min(340px, 86vw);
+  }
+}
+
+/* Móvil en horizontal: el panel lateral no debe tapar todo el lienzo. */
+@media (max-height: 560px) {
+  .panel-lateral {
+    width: min(320px, 58vw);
+    gap: 0.5rem;
+    padding: 0.6rem 0 0.7rem;
+  }
+
+  .panel-lateral-cabecera {
+    padding: 0 0.8rem;
+  }
+
+  .panel-lateral-pestanas {
+    margin: 0 0.8rem;
+  }
+
+  .panel-lateral-cuerpo {
+    padding: 0 0.8rem;
+  }
+
+  .despiece-stat {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .despiece-stat-valor {
+    font-size: 0.95rem;
+  }
+
+  .pieza-ficha-datos > div {
+    gap: 0.3rem;
   }
 }
 

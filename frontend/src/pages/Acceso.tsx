@@ -67,7 +67,7 @@ export default function Acceso() {
     <PaginaAutenticacion>
       <form className="tarjeta-auth" onSubmit={manejarEnvio} noValidate>
         <h1>Inicia sesión</h1>
-        <p>Accede con tu correo para retomar tus planos.</p>
+        <p>Acceso con correo electrónico para continuar con los planos.</p>
 
         <CampoAuth
           id="email"

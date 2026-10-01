@@ -46,6 +46,19 @@ export type Proyecto = InferSchemaType<typeof esquemaProyecto> & {
     espesorMm: number;
     cantidad: number;
     dePreset?: boolean;
+    forma?: {
+      anchoCm: number;
+      altoCm: number;
+      color?: string;
+      trazos: Array<{
+        rol: 'contorno' | 'vacio';
+        visible?: boolean;
+        cerrado?: boolean;
+        nombre?: string;
+        puntos: Array<{ x: number; y: number }>;
+        material?: { nombre: string; color: string };
+      }>;
+    };
   }>;
 };
 
