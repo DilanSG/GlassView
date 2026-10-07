@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { FormaPieza, TipoPiezaPersonalizada } from '../../tipos';
 import { primitivasDeForma } from '../../piezas/formas';
-import PrimitivasSvg from '../../piezas/PrimitivasSvg';
+import PrimitivasSvg from './PrimitivasSvg';
 import { obtenerPaletaPiezas } from '../../utils/colores';
 
 /** Vista previa en miniatura de la forma de una pieza. */

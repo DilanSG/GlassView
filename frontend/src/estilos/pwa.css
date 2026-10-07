@@ -1,0 +1,101 @@
+/* ── Avisos de la PWA (actualización, instalación, sin conexión) ── */
+
+.pwa-avisos {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(360px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.pwa-aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background-color: var(--bg-secondary);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  pointer-events: auto;
+  animation: pwa-aparecer 0.25s ease;
+}
+
+@keyframes pwa-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pwa-aviso-texto {
+  display: grid;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-aviso-texto strong {
+  font-size: 0.86rem;
+}
+
+.pwa-aviso-texto span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.pwa-aviso-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: none;
+}
+
+.pwa-aviso-acciones .boton-primario {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.pwa-aviso-cerrar {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.pwa-aviso-cerrar:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.pwa-aviso-offline {
+  border-color: color-mix(in srgb, var(--exito) 45%, var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-aviso {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .pwa-avisos {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    width: auto;
+  }
+}

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { variablesEntorno } from '../config/variablesEntorno.js';
-import { detectarPais, obtenerInfoPais, obtenerTasaCambio, redondearPrecio } from '../services/divisas.js';
-import { usuarioPublico } from '../services/suscripcion.js';
+import { detectarPais, obtenerInfoPais, obtenerTasaCambio, redondearPrecio } from '../services/facturacion/divisas.js';
+import { usuarioPublico } from '../services/facturacion/suscripcion.js';
 
 const DIAS_PERIODO = 30;
 const MILISEGUNDOS_DIA = 24 * 60 * 60 * 1000;

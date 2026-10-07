@@ -6,8 +6,9 @@ import {
   obtenerCatalogoVentaneria,
   obtenerPerfilesVentaneria,
 } from '../api/clienteApi';
-import DisenoProyecto from '../components/DisenoProyecto';
-import MiniaturaPlano from '../piezas/MiniaturaPlano';
+import DisenoProyecto from '../componentes/editor/DisenoProyecto';
+import { EVENTO_TUTORIAL, type EventoTutorial } from '../componentes/tutorial/pasosTutorial';
+import MiniaturaPlano from '../componentes/piezas/MiniaturaPlano';
 import type { HuecoProyecto, ModeloVentaneria, PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
 
 type ModoLienzo = 'hueco' | 'libre';
@@ -36,6 +37,7 @@ export default function NuevoProyecto() {
   const [proyecto, setProyecto] = useState<Proyecto | null>(null);
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState('');
+  const [sugerenciaTour, setSugerenciaTour] = useState(false);
 
   useEffect(() => {
     obtenerCatalogoVentaneria()
@@ -45,6 +47,33 @@ export default function NuevoProyecto() {
       .then(setPerfiles)
       .catch(() => setPerfiles([]));
   }, []);
+
+  // El tutorial puede prellenar el nombre y elegir una plantilla de ejemplo.
+  useEffect(() => {
+    function manejarTutorial(evento: Event): void {
+      const detalle = (evento as CustomEvent<EventoTutorial>).detail;
+      if (!detalle) {
+        return;
+      }
+      if (detalle.accion === 'prellenar-proyecto') {
+        setNombre((actual) => actual || 'Proyecto de ejemplo');
+      } else if (detalle.accion === 'elegir-plantilla') {
+        setSugerenciaTour(true);
+      } else if (detalle.accion === 'preparar-nuevo-proyecto') {
+        // Vuelve al asistente aunque el editor esté abierto (recorrido repetido).
+        setProyecto(null);
+      }
+    }
+    window.addEventListener(EVENTO_TUTORIAL, manejarTutorial);
+    return () => window.removeEventListener(EVENTO_TUTORIAL, manejarTutorial);
+  }, []);
+
+  // La plantilla de ejemplo se elige cuando el catálogo ya está cargado.
+  useEffect(() => {
+    if (sugerenciaTour && !modeloId && modelos.length > 0) {
+      setModeloId(modelos[0].id);
+    }
+  }, [sugerenciaTour, modeloId, modelos]);
 
   // Medidas de la vista previa: las del hueco o las de la plantilla en mapa libre.
   const medidasPreview = useMemo(() => {
@@ -204,7 +233,7 @@ export default function NuevoProyecto() {
       </header>
 
       <div className="nuevo-proyecto">
-        <section className="tarjeta-lienzo" aria-label="Vista previa del lienzo">
+        <section className="tarjeta-lienzo" aria-label="Vista previa del lienzo" data-tour="nuevo-preview">
           <header className="tarjeta-lienzo-cabecera">
             <span className="tarjeta-lienzo-titulo">Vista previa</span>
             {vistaPreview && (
@@ -263,7 +292,7 @@ export default function NuevoProyecto() {
         </section>
 
         <form className="nuevo-proyecto-form" onSubmit={manejarCreacion}>
-          <section className="tarjeta-form">
+          <section className="tarjeta-form" data-tour="nuevo-datos">
             <h3>Datos del proyecto</h3>
 
             <label htmlFor="nombre">Nombre del proyecto</label>
@@ -284,7 +313,7 @@ export default function NuevoProyecto() {
             />
           </section>
 
-          <section className="tarjeta-form">
+          <section className="tarjeta-form" data-tour="nuevo-lienzo">
             <h3>Lienzo y plantilla</h3>
 
             <div className="opciones-lienzo" role="radiogroup" aria-label="Tipo de lienzo">
@@ -396,6 +425,7 @@ export default function NuevoProyecto() {
 
             <button
               type="submit"
+              data-tour="nuevo-crear"
               className="boton-primario boton-crear-proyecto"
               disabled={creando}
             >

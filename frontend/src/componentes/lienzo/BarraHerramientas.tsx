@@ -37,7 +37,7 @@ export default function BarraHerramientas({
   const esPiezaActiva = herramienta.startsWith('custom-');
 
   return (
-    <div className={`barra-herramientas ${barraExpandida ? 'expandida' : ''}`}>
+    <div className={`barra-herramientas ${barraExpandida ? 'expandida' : ''}`} data-tour="editor-herramientas">
       <button
         type="button"
         className="barra-boton-expandir"

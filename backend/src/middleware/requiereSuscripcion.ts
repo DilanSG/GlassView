@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { calcularEstadoAcceso } from '../services/suscripcion.js';
+import { calcularEstadoAcceso } from '../services/facturacion/suscripcion.js';
 
 /**
  * Middleware de plan: bloquea las funciones de la aplicación cuando la prueba

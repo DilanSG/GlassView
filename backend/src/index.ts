@@ -1,7 +1,7 @@
 import { crearAplicacion } from './app.js';
 import { variablesEntorno } from './config/variablesEntorno.js';
-import { asegurarAdminInicial } from './services/bootstrap.js';
-import { conectarMongo } from './services/conexionMongo.js';
+import { asegurarAdminInicial } from './services/auth/bootstrap.js';
+import { conectarMongo } from './services/infra/conexionMongo.js';
 
 async function iniciarServidor(): Promise<void> {
   await conectarMongo();

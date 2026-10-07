@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { obtenerPrecioSuscripcion } from '../api/clienteApi';
-import BotonTema from '../components/BotonTema';
-import IconoCaracteristica, { type NombreIcono } from '../components/IconoCaracteristica';
-import PieDePagina from '../components/PieDePagina';
+import BotonTema from '../componentes/comunes/BotonTema';
+import IconoCaracteristica, { type NombreIcono } from '../componentes/comunes/IconoCaracteristica';
+import PieDePagina from '../componentes/navegacion/PieDePagina';
 import { useSesion } from '../contextos/SesionContexto';
 import type { PrecioSuscripcion } from '../tipos';
 import { formatearMoneda } from '../utils/formato';

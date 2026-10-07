@@ -6,7 +6,7 @@ import {
   obtenerPerfilesVentaneria,
   obtenerProyectos,
 } from '../api/clienteApi';
-import MiniaturaPlano from '../piezas/MiniaturaPlano';
+import MiniaturaPlano from '../componentes/piezas/MiniaturaPlano';
 import { useConfirmacion } from '../componentes/dialogos/ConfirmacionContexto';
 import type { PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
 
@@ -163,7 +163,7 @@ export default function Proyectos() {
   return (
     <div className="pantalla">
       <section className="seccion-proyectos">
-        <div className="seccion-titulo" ref={seccionCabeceraRef}>
+        <div className="seccion-titulo" ref={seccionCabeceraRef} data-tour="proyectos-titulo">
           <h2>Proyectos</h2>
           {proyectos.length > 0 && (
             <span className="subtitulo-contador">
@@ -181,14 +181,14 @@ export default function Proyectos() {
         {cargando ? (
           <p className="sin-datos">Cargando proyectos...</p>
         ) : proyectos.length === 0 ? (
-          <div className="estado-vacio" ref={vacioRef}>
+          <div className="estado-vacio" ref={vacioRef} data-tour="proyectos-vacio">
             <p>Todavía no hay proyectos.</p>
             <p className="estado-vacio-ayuda">
               Usa la pestaña «Nuevo proyecto» para crear el primero.
             </p>
           </div>
         ) : (
-          <ul className="lista-proyectos" ref={listaRef}>
+          <ul className="lista-proyectos" ref={listaRef} data-tour="proyectos-lista">
             {proyectos.map((proyecto, indice) => {
               const resumen = calcularResumen(proyecto.piezas);
               const esDestacada = indice === 0;
@@ -212,6 +212,7 @@ export default function Proyectos() {
                 <li key={proyecto._id} className={clasesCelda}>
                   <article
                     className={clasesTarjeta}
+                    data-tour={esDestacada ? 'proyectos-tarjeta' : undefined}
                     onClick={() => navegar(`/proyectos/${proyecto._id}`)}
                     role="button"
                     tabIndex={0}

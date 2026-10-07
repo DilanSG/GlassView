@@ -32,7 +32,11 @@ export interface UseZoomPanResultado {
   aplicarPan: (punto: PuntoPlano) => boolean;
   terminarPan: () => boolean;
   /** Ajusta la vista para mostrar todo el contenido en el lienzo. */
-  encuadrar: (rango: { x: number; y: number; ancho: number; alto: number } | null) => void;
+  encuadrar: (
+    rango: { x: number; y: number; ancho: number; alto: number } | null,
+    /** Píxeles de margen superior/izquierdo que ocupan elementos fijos (reglas). */
+    inset?: number,
+  ) => void;
 }
 
 export interface PuntoPlano {
@@ -161,25 +165,31 @@ export function useZoomPan(): UseZoomPanResultado {
   }
 
   /** Centra y escala la vista para que todo el contenido quepa en pantalla. */
-  function encuadrar(rango: { x: number; y: number; ancho: number; alto: number } | null): void {
+  function encuadrar(
+    rango: { x: number; y: number; ancho: number; alto: number } | null,
+    inset = 0,
+  ): void {
     const etapa = etapaRef.current;
     if (!etapa || !rango || rango.ancho <= 0 || rango.alto <= 0) return;
+    // El área útil excluye las reglas del borde superior e izquierdo.
+    const anchoUtil = Math.max(etapa.width() - inset, 1);
+    const altoUtil = Math.max(etapa.height() - inset, 1);
     // En pantallas pequeñas el margen se reduce: el contenido llena el lienzo.
-    const margen = Math.min(48, Math.min(etapa.width(), etapa.height()) * 0.08);
+    const margen = Math.min(48, Math.min(anchoUtil, altoUtil) * 0.08);
     const zoom = Math.min(
       ZOOM_MAX,
       Math.max(
         ZOOM_MIN,
         Math.min(
-          (etapa.width() - margen * 2) / rango.ancho,
-          (etapa.height() - margen * 2) / rango.alto,
+          (anchoUtil - margen * 2) / rango.ancho,
+          (altoUtil - margen * 2) / rango.alto,
         ),
       ),
     );
     setVista({
       zoom,
-      x: (etapa.width() - rango.ancho * zoom) / 2 - rango.x * zoom,
-      y: (etapa.height() - rango.alto * zoom) / 2 - rango.y * zoom,
+      x: inset + (anchoUtil - rango.ancho * zoom) / 2 - rango.x * zoom,
+      y: inset + (altoUtil - rango.alto * zoom) / 2 - rango.y * zoom,
     });
   }
 

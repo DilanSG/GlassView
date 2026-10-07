@@ -211,6 +211,17 @@ export const especificacionApi = {
         },
       },
     },
+    '/auth/tutorial': {
+      put: {
+        tags: ['Autenticación'],
+        summary: 'Marca el tutorial de bienvenida como visto',
+        responses: {
+          '200': { description: 'Tutorial completado', content: { 'application/json': { schema: { $ref: '#/components/schemas/RespuestaApi' } } } },
+          '401': { $ref: '#/components/responses/NoAutorizado' },
+          '500': { $ref: '#/components/responses/ErrorServidor' },
+        },
+      },
+    },
     '/auth/cuenta': {
       delete: {
         tags: ['Autenticación'],
@@ -962,6 +973,7 @@ export const especificacionApi = {
           email: { type: 'string', format: 'email' },
           rol: { type: 'string', enum: ['usuario', 'admin'] },
           activo: { type: 'boolean' },
+          tutorialVisto: { type: 'boolean', description: 'Si el tutorial de bienvenida ya se mostró en el primer ingreso' },
           fechaRegistro: { type: 'string', format: 'date-time' },
           pruebaHasta: { type: 'string', format: 'date-time', description: 'Fin de la prueba gratuita de 10 días' },
           suscripcion: {

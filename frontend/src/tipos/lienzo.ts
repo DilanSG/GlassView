@@ -1,5 +1,5 @@
 import type { HerramientaCad } from '../constantes';
-import type { PerfilCategoria } from '../tipos';
+import type { PerfilCategoria } from './index';
 
 export type InteraccionMover = {
   tipo: 'mover';

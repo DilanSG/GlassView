@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { PerfilVentaneria } from '../../tipos';
-import SeccionPieza from '../../piezas/SeccionPieza';
+import SeccionPieza from '../piezas/SeccionPieza';
 import { identidadDePerfil, parametrosDe } from '../../piezas/resolver';
 
 export interface SelectorRefProps {

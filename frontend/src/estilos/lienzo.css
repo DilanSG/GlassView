@@ -15,11 +15,13 @@
 .barra-herramientas {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 44px;
+  gap: 2px;
+  width: 48px;
   max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Sin barra de scroll visible: no le roba ancho a los iconos. */
+  scrollbar-width: none;
   padding: 6px;
   flex-shrink: 0;
   align-self: flex-start;
@@ -30,8 +32,12 @@
   transition: width 0.16s ease;
 }
 
+.barra-herramientas::-webkit-scrollbar {
+  display: none;
+}
+
 .barra-herramientas.expandida {
-  width: 186px;
+  width: 200px;
 }
 
 .barra-boton-expandir {
@@ -71,7 +77,7 @@
   height: 1px;
   width: 100%;
   background-color: var(--border-strong);
-  margin: 2px 0;
+  margin: 1px 0;
 }
 
 .herramienta-boton {
@@ -80,7 +86,7 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 6px;
+  padding: 5px 5px;
   background-color: transparent;
   color: var(--text-secondary);
   border: 1px solid transparent;
@@ -91,7 +97,7 @@
 
 .barra-herramientas.expandida .herramienta-boton {
   justify-content: flex-start;
-  padding: 6px 8px;
+  padding: 5px 8px;
 }
 
 .herramienta-boton:hover:not(:disabled) {
@@ -126,6 +132,12 @@
 /* Los nombres solo se muestran al abrir la barra con un clic (nunca hover). */
 .barra-herramientas.expandida .herramienta-nombre {
   display: inline;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Pegados al icono, a la izquierda (los botones centran por defecto). */
+  text-align: left;
 }
 
 .herramienta-boton.preset,
@@ -277,9 +289,13 @@
   touch-action: none;
 }
 
+/* Reglas de centímetros en los bordes superior e izquierdo del lienzo:
+   se dibujan en una capa de Konva (ver ReglasLienzo), así que aquí solo se
+   reserva el hueco para que los controles flotantes no las tapen. */
+
 .controles-lienzo {
   position: absolute;
-  top: 10px;
+  top: 28px;
   right: 10px;
   z-index: 40;
   display: flex;
@@ -289,8 +305,8 @@
 
 .guardado-overlay {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 28px;
+  left: 28px;
   z-index: 40;
 }
 
@@ -654,7 +670,7 @@
   }
 
   .barra-herramientas.expandida {
-    width: 168px;
+    width: 190px;
   }
 
   .boton-zoom,
@@ -664,14 +680,14 @@
   }
 
   .controles-lienzo {
-    top: 6px;
+    top: 24px;
     right: 6px;
     gap: 4px;
   }
 
   .guardado-overlay {
-    top: 6px;
-    left: 6px;
+    top: 24px;
+    left: 24px;
   }
 
   .panel-flotante-lienzo {
@@ -691,6 +707,34 @@
 
   .medidor-especificaciones {
     display: none;
+  }
+}
+
+/* Móvil en horizontal: la barra colapsada se reparte en columnas para que se
+   vean todas las herramientas sin desplazamiento. */
+@media (max-height: 560px) and (max-width: 860px) {
+  .barra-herramientas:not(.expandida) {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 1px;
+    width: auto;
+    max-width: 150px;
+    height: 100%;
+    padding: 4px;
+  }
+
+  .barra-herramientas:not(.expandida) .barra-herramientas-separador {
+    display: none;
+  }
+
+  .barra-herramientas:not(.expandida) .herramienta-boton,
+  .barra-herramientas:not(.expandida) .barra-boton-expandir {
+    width: 42px;
+    padding: 2px 4px;
+  }
+
+  .barra-herramientas:not(.expandida) .preset-lista {
+    margin-left: 0;
   }
 }
 

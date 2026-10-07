@@ -5,7 +5,7 @@ import { PX_POR_CM } from '../../constantes';
 import type { PaletaPiezas } from '../../utils/colores';
 import { radioSeguro } from '../../utils/geometria';
 import { crearContextosPiezas } from '../../piezas/contexto';
-import PiezaKonva from '../../piezas/PiezaKonva';
+import PiezaKonva from '../piezas/PiezaKonva';
 
 export interface PiezasKonvaProps {
   piezas: PiezaPlano[];

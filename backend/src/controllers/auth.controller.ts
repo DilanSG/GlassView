@@ -3,9 +3,9 @@ import { isValidObjectId } from 'mongoose';
 import { variablesEntorno } from '../config/variablesEntorno.js';
 import { Usuario } from '../models/Usuario.js';
 import { Proyecto } from '../models/Proyecto.js';
-import { hashearContrasena, verificarContrasena } from '../services/contrasenas.js';
-import { usuarioPublico } from '../services/suscripcion.js';
-import { crearToken } from '../services/token.js';
+import { hashearContrasena, verificarContrasena } from '../services/auth/contrasenas.js';
+import { usuarioPublico } from '../services/facturacion/suscripcion.js';
+import { crearToken } from '../services/auth/token.js';
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MINIMO_CONTRASENA = 6;
@@ -142,6 +142,21 @@ export async function actualizarPerfil(req: Request, res: Response): Promise<voi
     res.json({ exito: true, datos: usuarioPublico(usuario), mensaje: 'Perfil actualizado.' });
   } catch {
     res.status(500).json({ exito: false, datos: null, mensaje: 'No se pudo actualizar el perfil.' });
+  }
+}
+
+/** Marca el tutorial de bienvenida como visto para no repetirlo. */
+export async function marcarTutorialVisto(req: Request, res: Response): Promise<void> {
+  const usuario = req.usuario!;
+
+  try {
+    if (!usuario.tutorialVisto) {
+      usuario.tutorialVisto = true;
+      await usuario.save();
+    }
+    res.json({ exito: true, datos: usuarioPublico(usuario), mensaje: 'Tutorial completado.' });
+  } catch {
+    res.status(500).json({ exito: false, datos: null, mensaje: 'No se pudo guardar el tutorial.' });
   }
 }
 

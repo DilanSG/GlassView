@@ -15,7 +15,7 @@ import type {
   TrazoForma,
 } from '../../tipos';
 import { obtenerPaletaPiezas } from '../../utils/colores';
-import PrimitivasSvg from '../../piezas/PrimitivasSvg';
+import PrimitivasSvg from './PrimitivasSvg';
 import { primitivasDeForma } from '../../piezas/formas';
 import AyudaForma from './AyudaForma';
 import ModalMateriales from './ModalMateriales';
@@ -892,7 +892,7 @@ export default function EditorFormaPieza({
   const mostrarGuia = herramienta === 'punto' && puntoCursor !== null && enCurso && ultimoActivo !== null;
 
   return (
-    <div className="editor-forma">
+    <div className="editor-forma" data-tour="piezas-formas">
       <div className="editor-forma-cuerpo">
         {/* Barra estilo editor de planos: se expande con un clic para ver los nombres. */}
         <div

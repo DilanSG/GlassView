@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { HydratedDocument } from 'mongoose';
 import { isValidObjectId } from 'mongoose';
 import { Usuario, type Usuario as TipoUsuario } from '../models/Usuario.js';
-import { verificarToken } from '../services/token.js';
+import { verificarToken } from '../services/auth/token.js';
 
 declare global {
   namespace Express {

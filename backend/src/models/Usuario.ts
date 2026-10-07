@@ -38,6 +38,8 @@ const esquemaUsuario = new Schema(
     contrasenaHash: { type: String, required: true },
     rol: { type: String, enum: ['usuario', 'admin'], default: 'usuario' },
     activo: { type: Boolean, default: true },
+    /** El tutorial de bienvenida se muestra una vez, en el primer ingreso. */
+    tutorialVisto: { type: Boolean, default: false },
     fechaRegistro: { type: Date, default: Date.now },
     pruebaHasta: { type: Date, required: true },
     suscripcion: { type: esquemaSuscripcion, default: () => ({}) },

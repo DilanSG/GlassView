@@ -1,0 +1,18 @@
+{
+  "name": "glassview",
+  "version": "0.1.0",
+  "description": "GlassView: planos y despiece de instalaciones de cristalería",
+  "author": "IntoCode",
+  "contributors": ["Axl Anzola", "Dilan Acuña"],
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "build:backend": "npm run build --workspace backend",
+    "build:frontend": "npm run build --workspace frontend",
+    "start:backend": "npm start --workspace backend"
+  }
+}

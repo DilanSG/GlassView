@@ -3,12 +3,12 @@ import {
   calcularDespieceVentaneria,
   obtenerModeloVentaneria,
   obtenerModelosParaPaleta,
-} from '../services/catalogoVentaneria.js';
+} from '../services/catalogo/index.js';
 import {
   calcularDespiecePiezas,
   generarPiezasPreset,
-} from '../services/despiecePiezas.js';
-import { perfilesVentaneria } from '../services/perfilesVentaneria.js';
+} from '../services/catalogo/despiecePiezas.js';
+import { perfilesVentaneria } from '../services/catalogo/perfilesVentaneria.js';
 
 export function obtenerCatalogo(_req: Request, res: Response): void {
   try {

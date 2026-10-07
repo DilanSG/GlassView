@@ -6,7 +6,7 @@ import {
   eliminarPiezaPersonalizada,
   listarPiezasPersonalizadas,
 } from '../api/clienteApi';
-import BarraNavegacion from '../components/BarraNavegacion';
+import BarraNavegacion from '../componentes/navegacion/BarraNavegacion';
 import AvisoOrientacion from '../componentes/lienzo/AvisoOrientacion';
 import EditorFormaPieza from '../componentes/piezas/EditorFormaPieza';
 import InterruptorPublico from '../componentes/piezas/InterruptorPublico';
@@ -328,7 +328,7 @@ export default function PiezasPersonalizadas() {
         </div>
       )}
 
-      <section className="piezas-editor">
+      <section className="piezas-editor" data-tour="piezas-editor">
         <div className="piezas-editor-barra">
           <label className="piezas-selector">
             <span>Pieza</span>
@@ -350,6 +350,7 @@ export default function PiezasPersonalizadas() {
             <button
               type="button"
               className="boton-secundario"
+              data-tour="piezas-comunidad"
               onClick={() => setModalComunidad(true)}
             >
               Piezas de la comunidad
@@ -379,7 +380,13 @@ export default function PiezasPersonalizadas() {
               </>
             )}
             {borrador.propia && (
-              <button type="button" className="boton-primario" onClick={() => void guardar()} disabled={guardando}>
+              <button
+                type="button"
+                className="boton-primario"
+                data-tour="piezas-guardar"
+                onClick={() => void guardar()}
+                disabled={guardando}
+              >
                 {guardando ? 'Guardando…' : 'Guardar pieza'}
               </button>
             )}
@@ -393,7 +400,7 @@ export default function PiezasPersonalizadas() {
           </p>
         )}
 
-        <div className="piezas-editor-campos">
+        <div className="piezas-editor-campos" data-tour="piezas-campos">
           <label>
             Nombre
             <input
@@ -484,7 +491,7 @@ export default function PiezasPersonalizadas() {
         </div>
 
         {editorCompleto ? (
-          <div className="piezas-editor-acceso">
+          <div className="piezas-editor-acceso" data-tour="piezas-editor-acceso">
             <button
               type="button"
               className="piezas-editor-acceso-boton"

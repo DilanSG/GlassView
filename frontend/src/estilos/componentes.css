@@ -832,16 +832,23 @@
 }
 
 .pie-pagina {
-  border-top: 1px solid var(--border);
-  padding: 0.9rem 1.5rem;
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.2rem 0.55rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1.5rem;
+  padding: 0.85rem clamp(1rem, 4vw, 2.5rem);
+  border-top: 1px solid var(--linea-fina);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.pie-pagina-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.55rem;
+  min-width: 0;
 }
 
 .pie-pagina p {
@@ -850,6 +857,10 @@
 }
 
 .pie-pagina-punto {
+  color: var(--text-tertiary);
+}
+
+.pie-pagina-creditos {
   color: var(--text-tertiary);
 }
 
@@ -864,6 +875,836 @@
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* Acceso al selector de tutoriales: solo texto, sin contorno. */
+.pie-pagina-tutorial {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  padding: 0.2rem 0.15rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.pie-pagina-tutorial svg {
+  flex: none;
+}
+
+.pie-pagina-tutorial:hover:not(:disabled) {
+  background: none;
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.pie-pagina-tutorial:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+/* ── Tutorial guiado: tarjetas ancladas al elemento que explican ── */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+
+/* Oscurece toda la pantalla cuando el paso no resalta nada. */
+.tour-velo {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+/* Foco sobre el elemento resaltado: el borde claro lo delimita y la sombra
+   gigante oscurece el resto de la pantalla. */
+.tour-foco {
+  position: fixed;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.9),
+    0 0 0 9999px rgba(0, 0, 0, 0.55);
+  transition: left 0.28s ease, top 0.28s ease, width 0.28s ease, height 0.28s ease;
+  pointer-events: none;
+}
+
+.tour-tarjeta {
+  position: fixed;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--ancho-tour, 380px), calc(100vw - 1.5rem));
+  max-height: min(78vh, 620px);
+  max-height: min(78dvh, 620px);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: auto;
+  transition: left 0.28s ease, top 0.28s ease;
+}
+
+/* La tarjeta final con las opciones necesita más alto: no hay scroll. */
+.tour-tarjeta-opciones {
+  max-height: min(92vh, 860px);
+  max-height: min(92dvh, 860px);
+}
+
+.tour-tarjeta.tour-visible {
+  visibility: visible;
+}
+
+.tour-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 0.9rem 0.35rem 1.1rem;
+}
+
+.tour-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tour-icono svg {
+  width: 19px;
+  height: 19px;
+}
+
+.tour-icono img {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.tour-seccion {
+  flex: 1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.tour-cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-secondary);
+}
+
+.tour-cerrar:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tour-cerrar:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+.tour-cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.35rem 1.35rem 1.1rem;
+  overscroll-behavior: contain;
+}
+
+.tour-contenido {
+  min-width: 0;
+  animation: tour-aparecer 0.22s ease;
+}
+
+@keyframes tour-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tour-titulo {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.tour-texto {
+  margin: 0.5rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+
+.tour-claves {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tour-claves li {
+  position: relative;
+  padding-left: 1.35rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+.tour-claves li::before {
+  content: '';
+  position: absolute;
+  left: 0.1rem;
+  top: 0.48em;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background-color: var(--text-tertiary);
+}
+
+.tour-nota {
+  margin: 0.9rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+/* Botón que ejecuta una acción de la página (por ejemplo, pantalla horizontal). */
+.tour-boton-accion {
+  display: block;
+  width: 100%;
+  margin-top: 0.9rem;
+  padding: 0.55rem 0.9rem;
+  white-space: nowrap;
+  background-color: var(--bg-pressed);
+  font-weight: 600;
+}
+
+.tour-boton-accion:hover:not(:disabled) {
+  background-color: var(--border-strong);
+}
+
+/* Términos resaltados dentro de los textos del tutorial (solo tipografía). */
+.tour-resalte {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Opciones de recorridos en la tarjeta final. */
+.tour-opciones {
+  min-width: 0;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--linea-fina);
+}
+
+.tour-opciones-titulo {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.tour-opciones-lista {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tour-opciones-lista li {
+  min-width: 0;
+}
+
+.tour-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.55rem;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.tour-opcion:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+}
+
+.tour-opcion:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+.tour-opcion-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tour-opcion-icono svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tour-opcion-icono img {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.tour-opcion-datos {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.tour-opcion-datos strong {
+  font-size: 0.88rem;
+}
+
+.tour-opcion-datos span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+.tour-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.7rem;
+  padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--linea-fina);
+}
+
+.tour-saltar {
+  order: 1;
+  padding: 0.3rem 0.35rem;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.tour-saltar:hover:not(:disabled) {
+  background: none;
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.tour-saltar-vacio {
+  display: none;
+}
+
+.tour-acciones {
+  order: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Los botones no parten su texto: crecen en horizontal y, si no caben,
+   bajan de fila completos en lugar de recortarse. */
+.tour-acciones button {
+  flex: none;
+  white-space: nowrap;
+  padding: 0.45rem 0.85rem;
+}
+
+.tour-espera {
+  order: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1 1 100%;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.tour-espera-punto {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--text-primary);
+  animation: tour-latido 1.4s ease-in-out infinite;
+}
+
+@keyframes tour-latido {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.75);
+  }
+}
+
+.tour-paso {
+  order: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.tour-paso-texto {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.tour-progreso {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background-color: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.tour-progreso-relleno {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--text-primary);
+  transition: width 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-foco,
+  .tour-tarjeta,
+  .tour-progreso-relleno {
+    transition: none;
+  }
+
+  .tour-contenido {
+    animation: none;
+  }
+
+  .tour-espera-punto {
+    animation: none;
+  }
+}
+
+/* Móvil: la tarjeta ocupa el ancho y el pie se reacomoda en filas. */
+@media (max-width: 560px) {
+  .tour-tarjeta {
+    width: calc(100vw - 1.25rem);
+    max-height: 74vh;
+    max-height: 74dvh;
+  }
+
+  .tour-cabecera {
+    padding: 0.75rem 0.75rem 0.3rem 1rem;
+  }
+
+  .tour-cuerpo {
+    padding: 0.3rem 1rem 0.95rem;
+  }
+
+  .tour-pie {
+    padding: 0.65rem 0.9rem calc(0.65rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Móvil en vertical: tarjeta compacta, textos pequeños y más alto útil. */
+@media (max-width: 720px) and (orientation: portrait) {
+  .tour-tarjeta {
+    width: min(var(--ancho-tour, 320px), calc(100vw - 1rem));
+    max-width: 340px;
+    max-height: calc(100vh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 14px;
+  }
+
+  .tour-cabecera {
+    gap: 0.45rem;
+    padding: 0.6rem 0.6rem 0.2rem 0.8rem;
+  }
+
+  .tour-icono {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+
+  .tour-icono svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .tour-icono img {
+    width: 17px;
+    height: 17px;
+  }
+
+  .tour-seccion {
+    font-size: 0.62rem;
+  }
+
+  .tour-cerrar {
+    width: 26px;
+    height: 26px;
+  }
+
+  .tour-cuerpo {
+    padding: 0.15rem 0.8rem 0.7rem;
+  }
+
+  .tour-titulo {
+    font-size: 0.95rem;
+  }
+
+  .tour-texto {
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .tour-claves {
+    gap: 0.3rem;
+    margin-top: 0.6rem;
+  }
+
+  .tour-claves li {
+    padding-left: 1rem;
+    font-size: 0.74rem;
+    line-height: 1.38;
+  }
+
+  .tour-claves li::before {
+    left: 0.02rem;
+    width: 0.32rem;
+    height: 0.32rem;
+  }
+
+  .tour-nota {
+    margin-top: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  .tour-boton-accion {
+    margin-top: 0.7rem;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.78rem;
+  }
+
+  .tour-pie {
+    gap: 0.35rem 0.5rem;
+    padding: 0.5rem 0.7rem calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  .tour-saltar {
+    font-size: 0.72rem;
+  }
+
+  .tour-acciones button {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.76rem;
+  }
+
+  .tour-espera {
+    font-size: 0.7rem;
+  }
+
+  .tour-progreso {
+    height: 4px;
+  }
+
+  /* La lista final se compacta para que no necesite desplazamiento. */
+  .tour-opciones {
+    margin-top: 0.75rem;
+    padding-top: 0.6rem;
+  }
+
+  .tour-opciones-titulo {
+    margin-bottom: 0.4rem;
+    font-size: 0.62rem;
+  }
+
+  .tour-opciones-lista {
+    gap: 0.3rem;
+  }
+
+  .tour-opcion {
+    gap: 0.5rem;
+    padding: 0.42rem 0.5rem;
+    border-radius: 9px;
+  }
+
+  .tour-opcion-icono {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+  }
+
+  .tour-opcion-icono svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .tour-opcion-icono img {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tour-opcion-datos strong {
+    font-size: 0.78rem;
+  }
+
+  .tour-opcion-datos span {
+    font-size: 0.68rem;
+  }
+}
+
+/* Pantallas bajas (móvil en horizontal): todo más compacto. */
+@media (max-height: 520px) {
+  .tour-tarjeta {
+    max-height: 84vh;
+    max-height: 84dvh;
+  }
+
+  .tour-icono {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .tour-icono svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tour-icono img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .tour-titulo {
+    font-size: 1rem;
+  }
+
+  .tour-cuerpo {
+    padding: 0.25rem 1rem 0.85rem;
+  }
+}
+
+/* ── Tutorial guiado (fin) ───────────────────────────────────── */
+
+/* ── Selector de recorridos del tutorial ─────────────────────── */
+
+.selector-tutorial-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+.selector-tutorial {
+  width: min(480px, 100%);
+  max-height: min(88vh, 660px);
+  max-height: min(88dvh, 660px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1.05rem 1.15rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background-color: var(--bg-secondary);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+.selector-tutorial-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.selector-tutorial-titulo {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.selector-tutorial-cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-secondary);
+}
+
+.selector-tutorial-cerrar:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.selector-tutorial-cerrar:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+.selector-tutorial-intro {
+  margin: 0.45rem 0 1rem;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.selector-tutorial-lista {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selector-tutorial-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.65rem;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.selector-tutorial-opcion:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+}
+
+.selector-tutorial-opcion:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+.selector-tutorial-opcion:disabled {
+  opacity: 0.55;
+}
+
+.selector-tutorial-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.selector-tutorial-icono svg {
+  width: 19px;
+  height: 19px;
+}
+
+.selector-tutorial-icono img {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.selector-tutorial-datos {
+  display: grid;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.selector-tutorial-datos strong {
+  font-size: 0.92rem;
+}
+
+.selector-tutorial-datos span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.selector-tutorial-flecha {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 560px) {
+  .selector-tutorial-fondo {
+    padding: 0.75rem;
+  }
+
+  .selector-tutorial {
+    border-radius: 16px;
+    padding: 0.95rem 1rem 1.05rem;
+  }
+}
+
+/* ── Selector de recorridos (fin) ────────────────────────────── */
 
 .estructura-app {
   min-height: 100vh;
@@ -1008,13 +1849,23 @@
     flex-wrap: wrap;
   }
 
-  /* En móvil la autoría baja a su propia línea para no cortar frases. */
+  /* En móvil la información va a la izquierda y el tutorial queda como icono
+     a la derecha. */
   .pie-pagina {
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 0.1rem;
+    justify-content: space-between;
+    gap: 0.75rem;
     padding: 1rem 1.25rem calc(1rem + env(safe-area-inset-bottom));
-    line-height: 1.5;
+    line-height: 1.45;
+  }
+
+  .pie-pagina-info {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-width: 0;
   }
 
   .pie-pagina-creditos {

@@ -8,6 +8,7 @@ import {
   eliminarUsuarioAdmin,
   iniciarSesion,
   listarUsuariosAdmin,
+  marcarTutorialVisto,
   obtenerPerfil,
   obtenerUsuarioAdmin,
   registrarUsuario,
@@ -22,6 +23,7 @@ router.post('/login', iniciarSesion);
 
 router.get('/perfil', autenticar, obtenerPerfil);
 router.put('/perfil', autenticar, actualizarPerfil);
+router.put('/tutorial', autenticar, marcarTutorialVisto);
 router.put('/contrasena', autenticar, cambiarContrasena);
 router.delete('/cuenta', autenticar, eliminarCuenta);
 

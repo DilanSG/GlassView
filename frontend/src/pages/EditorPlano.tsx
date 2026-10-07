@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { actualizarProyecto, obtenerProyecto } from '../api/clienteApi';
-import DisenoProyecto from '../components/DisenoProyecto';
+import DisenoProyecto from '../componentes/editor/DisenoProyecto';
 import type { Proyecto } from '../tipos';
 
 export default function EditorPlano() {

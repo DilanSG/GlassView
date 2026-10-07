@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ErrorApi, registrarse } from '../api/clienteApi';
-import { AlertaAuth, CampoAuth, CampoContrasena, IndicadorFuerza } from '../components/CamposAuth';
-import PaginaAutenticacion from '../components/PaginaAutenticacion';
+import { AlertaAuth, CampoAuth, CampoContrasena, IndicadorFuerza } from '../componentes/autenticacion/CamposAuth';
+import PaginaAutenticacion from '../componentes/autenticacion/PaginaAutenticacion';
 import { useSesion } from '../contextos/SesionContexto';
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
