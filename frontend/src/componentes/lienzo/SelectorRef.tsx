@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { PerfilVentaneria } from '../../tipos';
 import SeccionPieza from '../piezas/SeccionPieza';
 import { identidadDePerfil, parametrosDe } from '../../piezas/resolver';
+import { resaltar } from '../../utils/resaltar';
 
 export interface SelectorRefProps {
   categoria: string;
@@ -69,7 +70,7 @@ export default function SelectorRef({
           );
         })}
         {resultados.length === 0 && (
-          <li className="selector-ref-vacio">Sin resultados para «{terminoBusqueda}»</li>
+          <li className="selector-ref-vacio">Sin resultados para {resaltar(`«${terminoBusqueda}»`)}</li>
         )}
       </ul>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent } from 'react';
+import { resaltar } from '../../utils/resaltar';
 
 export interface OpcionesConfirmacion {
   titulo: string;
@@ -68,7 +69,7 @@ export default function DialogoConfirmacion({
         {opciones.textoExigido && (
           <div className="campo">
             <label htmlFor="confirmar-texto">
-              Escribe «{opciones.textoExigido}» para confirmar
+              Escribe {resaltar(`«${opciones.textoExigido}»`)} para confirmar
             </label>
             <input
               id="confirmar-texto"

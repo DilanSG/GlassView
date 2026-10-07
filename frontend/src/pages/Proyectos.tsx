@@ -9,6 +9,7 @@ import {
 import MiniaturaPlano from '../componentes/piezas/MiniaturaPlano';
 import { useConfirmacion } from '../componentes/dialogos/ConfirmacionContexto';
 import type { PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
+import { resaltar } from '../utils/resaltar';
 
 function formatearFecha(fecha: string): string {
   return new Date(fecha).toLocaleDateString('es-ES', {
@@ -184,7 +185,7 @@ export default function Proyectos() {
           <div className="estado-vacio" ref={vacioRef} data-tour="proyectos-vacio">
             <p>Todavía no hay proyectos.</p>
             <p className="estado-vacio-ayuda">
-              Usa la pestaña «Nuevo proyecto» para crear el primero.
+              Usa la pestaña {resaltar('«Nuevo proyecto»')} para crear el primero.
             </p>
           </div>
         ) : (

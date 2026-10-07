@@ -26,6 +26,11 @@ export default defineConfig({
         background_color: '#f5f5f7',
         theme_color: '#f5f5f7',
         categories: ['productivity', 'business', 'utilities'],
+        // Permite a Chrome comprobar con getInstalledRelatedApps() si la PWA
+        // ya está instalada en el dispositivo.
+        related_applications: [
+          { platform: 'webapp', url: 'https://glass-view.vercel.app/manifest.webmanifest' },
+        ],
         icons: [
           { src: '/icons/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/pwa-512x512.png', sizes: '512x512', type: 'image/png' },

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
+import { resaltar } from '../../utils/resaltar';
 
 interface EventoInstalacion extends Event {
   prompt: () => Promise<void>;
@@ -8,13 +9,21 @@ interface EventoInstalacion extends Event {
 
 /** Modos de visualización que indican que la app corre instalada. */
 const MODOS_INSTALADA = ['standalone', 'window-controls-overlay', 'fullscreen', 'minimal-ui'];
+/** Recuerda que la app se instaló desde este navegador. */
+const CLAVE_INSTALADA = 'glassview:app-instalada';
+/** Recuerda que el usuario ocultó el aviso de instalación. */
+const CLAVE_DESCARTE = 'glassview:instalar-descartado';
 
-function estaInstalada(): boolean {
+function enModoInstalado(): boolean {
   const porModo = MODOS_INSTALADA.some((modo) =>
     window.matchMedia(`(display-mode: ${modo})`).matches,
   );
   const porIos = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   return porModo || porIos;
+}
+
+function estaInstalada(): boolean {
+  return localStorage.getItem(CLAVE_INSTALADA) === '1' || enModoInstalado();
 }
 
 function esIos(): boolean {
@@ -26,14 +35,17 @@ function esIos(): boolean {
 
 /**
  * Avisos de la PWA: registra el service worker y muestra el aviso de
- * instalación (mientras la app no esté instalada), el de actualización
- * disponible y el de uso sin conexión.
+ * instalación (mientras la app no esté instalada o no se haya ocultado), el de
+ * actualización disponible y el de uso sin conexión.
  */
 export default function PwaAvisos(): JSX.Element | null {
   const [hayActualizacion, setHayActualizacion] = useState(false);
   const [listoOffline, setListoOffline] = useState(false);
   const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacion | null>(null);
   const [instalada, setInstalada] = useState(() => estaInstalada());
+  const [descartado, setDescartado] = useState(
+    () => localStorage.getItem(CLAVE_DESCARTE) === '1',
+  );
   const actualizarRef = useRef<((recargar?: boolean) => Promise<void>) | null>(null);
 
   useEffect(() => {
@@ -57,23 +69,49 @@ export default function PwaAvisos(): JSX.Element | null {
     });
   }, []);
 
-  // El aviso de instalación se muestra siempre que la app no esté instalada.
+  /** Marca la app como instalada y oculta el aviso. */
+  const marcarInstalada = useCallback((): void => {
+    localStorage.setItem(CLAVE_INSTALADA, '1');
+    setEventoInstalacion(null);
+    setInstalada(true);
+  }, []);
+
   useEffect(() => {
     function alPoderInstalar(evento: Event): void {
       evento.preventDefault();
       setEventoInstalacion(evento as EventoInstalacion);
     }
-    function alInstalarse(): void {
-      setEventoInstalacion(null);
-      setInstalada(true);
-    }
     window.addEventListener('beforeinstallprompt', alPoderInstalar);
-    window.addEventListener('appinstalled', alInstalarse);
+    window.addEventListener('appinstalled', marcarInstalada);
     return () => {
       window.removeEventListener('beforeinstallprompt', alPoderInstalar);
-      window.removeEventListener('appinstalled', alInstalarse);
+      window.removeEventListener('appinstalled', marcarInstalada);
     };
-  }, []);
+  }, [marcarInstalada]);
+
+  // Chrome puede confirmar que la PWA ya está instalada en el dispositivo.
+  useEffect(() => {
+    const nav = window.navigator as Navigator & {
+      getInstalledRelatedApps?: () => Promise<unknown[]>;
+    };
+    if (!nav.getInstalledRelatedApps) {
+      return;
+    }
+    let vigente = true;
+    nav
+      .getInstalledRelatedApps()
+      .then((apps) => {
+        if (vigente && apps.length > 0) {
+          marcarInstalada();
+        }
+      })
+      .catch(() => {
+        // Sin permiso o sin soporte: se mantiene la detección por modo.
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [marcarInstalada]);
 
   // Al abrirse desde el icono instalado, el aviso desaparece.
   useEffect(() => {
@@ -103,12 +141,18 @@ export default function PwaAvisos(): JSX.Element | null {
     await eventoInstalacion.prompt();
     const eleccion = await eventoInstalacion.userChoice;
     if (eleccion.outcome === 'accepted') {
-      setEventoInstalacion(null);
-      setInstalada(true);
+      marcarInstalada();
     }
-  }, [eventoInstalacion]);
+  }, [eventoInstalacion, marcarInstalada]);
 
-  if (instalada && !hayActualizacion && !listoOffline) {
+  /** Oculta el aviso de instalación de forma permanente. */
+  function descartarInstalacion(): void {
+    localStorage.setItem(CLAVE_DESCARTE, '1');
+    setDescartado(true);
+  }
+
+  const mostrarInstalacion = !instalada && !descartado;
+  if (!mostrarInstalacion && !hayActualizacion && !listoOffline) {
     return null;
   }
 
@@ -120,18 +164,27 @@ export default function PwaAvisos(): JSX.Element | null {
 
   return (
     <div className="pwa-avisos">
-      {!instalada && (
+      {mostrarInstalacion && (
         <div className="pwa-instalar" aria-label="Instalar GlassView">
           <img className="pwa-instalar-icono" src="/icons/pwa-192x192.png" alt="" />
           <div className="pwa-instalar-texto">
             <strong>Instala GlassView</strong>
-            <span>{instruccion}</span>
+            <span>{resaltar(instruccion, 'instalar')}</span>
           </div>
           {eventoInstalacion && (
             <button type="button" className="pwa-instalar-boton" onClick={() => void instalar()}>
               Instalar
             </button>
           )}
+          <button
+            type="button"
+            className="pwa-instalar-cerrar"
+            aria-label="Ocultar el aviso de instalación"
+            title="No volver a mostrar"
+            onClick={descartarInstalacion}
+          >
+            ×
+          </button>
         </div>
       )}
 

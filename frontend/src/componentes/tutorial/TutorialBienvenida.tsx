@@ -5,11 +5,11 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { elementoEnPantallaCompleta } from '../../utils/pantallaCompleta';
+import { resaltar } from '../../utils/resaltar';
 import IconoCaracteristica from '../comunes/IconoCaracteristica';
 import {
   avisarTutorial,
@@ -64,22 +64,6 @@ function textoDe(valor: string | (() => string) | undefined): string {
     return '';
   }
   return typeof valor === 'function' ? valor() : valor;
-}
-
-/**
- * Convierte los tramos escritos entre «guiones angulares» en texto resaltado,
- * para que no se vean los signos en la tarjeta.
- */
-function resaltar(texto: string, clave: string): ReactNode[] {
-  return texto.split(/«([^»]+)»/g).map((parte, posicion) =>
-    posicion % 2 === 1 ? (
-      <strong key={`${clave}-${posicion}`} className="tour-resalte">
-        {parte}
-      </strong>
-    ) : (
-      parte
-    ),
-  );
 }
 
 /** Ancho de la tarjeta según la cantidad de contenido del paso. */

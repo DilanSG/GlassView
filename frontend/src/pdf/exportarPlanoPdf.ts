@@ -799,7 +799,7 @@ export function crearPlanoPdf(
   pdf.setFontSize(7);
   pdf.setTextColor(110, 112, 116);
   pdf.text(
-    'Cotas en centímetros. Los números remiten al «Detalle por pieza» de las páginas siguientes.',
+    'Cotas en centímetros. Los números remiten al Detalle por pieza de las páginas siguientes.',
     MARGEN,
     altoPagina - 6,
   );

@@ -10,6 +10,7 @@ import DisenoProyecto from '../componentes/editor/DisenoProyecto';
 import { EVENTO_TUTORIAL, type EventoTutorial } from '../componentes/tutorial/pasosTutorial';
 import MiniaturaPlano from '../componentes/piezas/MiniaturaPlano';
 import type { HuecoProyecto, ModeloVentaneria, PerfilVentaneria, PiezaPlano, Proyecto } from '../tipos';
+import { resaltar } from '../utils/resaltar';
 
 type ModoLienzo = 'hueco' | 'libre';
 
@@ -283,10 +284,10 @@ export default function NuevoProyecto() {
           <p className="vista-lienzo-pie">
             {modo === 'hueco'
               ? modeloElegido
-                ? `La plantilla «${modeloElegido.nombre}» se creará al tamaño del hueco.`
+                ? resaltar(`La plantilla «${modeloElegido.nombre}» se creará al tamaño del hueco.`)
                 : 'El lienzo se creará con el tamaño del hueco.'
               : modeloElegido
-                ? `La plantilla «${modeloElegido.nombre}» se creará con las medidas que indiques.`
+                ? resaltar(`La plantilla «${modeloElegido.nombre}» se creará con las medidas que indiques.`)
                 : 'Sin medidas de obra: podrás dibujar en cualquier parte del lienzo.'}
           </p>
         </section>

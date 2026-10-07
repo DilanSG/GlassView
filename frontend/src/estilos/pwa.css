@@ -69,6 +69,23 @@
   outline-offset: 2px;
 }
 
+.pwa-instalar-cerrar {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.pwa-instalar-cerrar:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
 /* Avisos secundarios: actualización y uso sin conexión. */
 .pwa-aviso {
   display: flex;

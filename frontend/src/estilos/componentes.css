@@ -1113,8 +1113,8 @@
   background-color: var(--border-strong);
 }
 
-/* Términos resaltados dentro de los textos del tutorial (solo tipografía). */
-.tour-resalte {
+/* Términos resaltados en los textos (solo tipografía, sin fondo). */
+.texto-resalte {
   font-weight: 700;
   color: var(--text-primary);
 }
