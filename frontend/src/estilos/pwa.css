@@ -1,17 +1,76 @@
-/* ── Avisos de la PWA (actualización, instalación, sin conexión) ── */
+/* ── Avisos de la PWA (instalación, actualización, sin conexión) ── */
 
 .pwa-avisos {
   position: fixed;
-  right: 1rem;
+  left: 50%;
   bottom: calc(1rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
   z-index: 60;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  width: min(360px, calc(100vw - 2rem));
+  width: min(460px, calc(100vw - 1.5rem));
   pointer-events: none;
 }
 
+/* Aviso de instalación: tarjeta protagonista mientras la app no esté instalada. */
+.pwa-instalar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--text-primary);
+  border-radius: 16px;
+  background-color: var(--bg-secondary);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  animation: pwa-aparecer 0.25s ease;
+}
+
+.pwa-instalar-icono {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.pwa-instalar-texto {
+  display: grid;
+  gap: 0.12rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-instalar-texto strong {
+  font-size: 0.95rem;
+}
+
+.pwa-instalar-texto span {
+  color: var(--text-secondary);
+  font-size: 0.79rem;
+  line-height: 1.4;
+}
+
+.pwa-instalar-boton {
+  flex: none;
+  padding: 0.55rem 1rem;
+  border-radius: 10px;
+  background-color: var(--acento);
+  color: var(--acento-texto);
+  font-weight: 600;
+}
+
+.pwa-instalar-boton:hover:not(:disabled) {
+  background-color: var(--acento-hover);
+}
+
+.pwa-instalar-boton:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+/* Avisos secundarios: actualización y uso sin conexión. */
 .pwa-aviso {
   display: flex;
   align-items: center;
@@ -86,16 +145,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pwa-aviso {
+  .pwa-aviso,
+  .pwa-instalar {
     animation: none;
   }
 }
 
 @media (max-width: 560px) {
   .pwa-avisos {
-    right: 0.75rem;
-    left: 0.75rem;
     bottom: calc(0.75rem + env(safe-area-inset-bottom));
-    width: auto;
+    width: calc(100vw - 1.5rem);
+  }
+
+  .pwa-instalar {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .pwa-instalar-icono {
+    width: 38px;
+    height: 38px;
   }
 }

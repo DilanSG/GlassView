@@ -6,28 +6,34 @@ interface EventoInstalacion extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-/** Clave donde se recuerda que el usuario no quiere ver el aviso de instalación. */
-const CLAVE_DESCARTE = 'glassview:instalacion-descartada';
+/** Modos de visualización que indican que la app corre instalada. */
+const MODOS_INSTALADA = ['standalone', 'window-controls-overlay', 'fullscreen', 'minimal-ui'];
 
-function enIos(): boolean {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+function estaInstalada(): boolean {
+  const porModo = MODOS_INSTALADA.some((modo) =>
+    window.matchMedia(`(display-mode: ${modo})`).matches,
+  );
+  const porIos = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return porModo || porIos;
 }
 
-function yaInstalada(): boolean {
-  const enModoApp = window.matchMedia('(display-mode: standalone)').matches;
-  const enIos = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return enModoApp || enIos;
+function esIos(): boolean {
+  const ua = window.navigator.userAgent;
+  // iPadOS 13+ se identifica como Macintosh; se distingue por los puntos táctiles.
+  const ipadComoMac = /Macintosh/i.test(ua) && window.navigator.maxTouchPoints > 1;
+  return /iphone|ipad|ipod/i.test(ua) || ipadComoMac;
 }
 
 /**
- * Avisos de la PWA: registra el service worker y muestra los avisos de
- * actualización, uso sin conexión e instalación en el dispositivo.
+ * Avisos de la PWA: registra el service worker y muestra el aviso de
+ * instalación (mientras la app no esté instalada), el de actualización
+ * disponible y el de uso sin conexión.
  */
 export default function PwaAvisos(): JSX.Element | null {
   const [hayActualizacion, setHayActualizacion] = useState(false);
   const [listoOffline, setListoOffline] = useState(false);
   const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacion | null>(null);
-  const [ayudaIos, setAyudaIos] = useState(false);
+  const [instalada, setInstalada] = useState(() => estaInstalada());
   const actualizarRef = useRef<((recargar?: boolean) => Promise<void>) | null>(null);
 
   useEffect(() => {
@@ -51,32 +57,42 @@ export default function PwaAvisos(): JSX.Element | null {
     });
   }, []);
 
+  // El aviso de instalación se muestra siempre que la app no esté instalada.
   useEffect(() => {
     function alPoderInstalar(evento: Event): void {
       evento.preventDefault();
-      if (localStorage.getItem(CLAVE_DESCARTE) === '1') {
-        return;
-      }
       setEventoInstalacion(evento as EventoInstalacion);
     }
+    function alInstalarse(): void {
+      setEventoInstalacion(null);
+      setInstalada(true);
+    }
     window.addEventListener('beforeinstallprompt', alPoderInstalar);
-    return () => window.removeEventListener('beforeinstallprompt', alPoderInstalar);
+    window.addEventListener('appinstalled', alInstalarse);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', alPoderInstalar);
+      window.removeEventListener('appinstalled', alInstalarse);
+    };
   }, []);
 
+  // Al abrirse desde el icono instalado, el aviso desaparece.
   useEffect(() => {
-    // iOS no avisa con beforeinstallprompt: se muestra una ayuda breve.
-    if (yaInstalada() || localStorage.getItem(CLAVE_DESCARTE) === '1' || !enIos()) {
-      return;
+    const consultas = MODOS_INSTALADA.map((modo) =>
+      window.matchMedia(`(display-mode: ${modo})`),
+    );
+    function alCambiar(): void {
+      setInstalada(estaInstalada());
     }
-    const temporizador = window.setTimeout(() => setAyudaIos(true), 4000);
-    return () => window.clearTimeout(temporizador);
+    consultas.forEach((consulta) => consulta.addEventListener('change', alCambiar));
+    return () =>
+      consultas.forEach((consulta) => consulta.removeEventListener('change', alCambiar));
   }, []);
 
   useEffect(() => {
     if (!listoOffline) {
       return;
     }
-    const temporizador = window.setTimeout(() => setListoOffline(false), 5000);
+    const temporizador = window.setTimeout(() => setListoOffline(false), 6000);
     return () => window.clearTimeout(temporizador);
   }, [listoOffline]);
 
@@ -86,27 +102,41 @@ export default function PwaAvisos(): JSX.Element | null {
     }
     await eventoInstalacion.prompt();
     const eleccion = await eventoInstalacion.userChoice;
-    if (eleccion.outcome === 'dismissed') {
-      localStorage.setItem(CLAVE_DESCARTE, '1');
+    if (eleccion.outcome === 'accepted') {
+      setEventoInstalacion(null);
+      setInstalada(true);
     }
-    setEventoInstalacion(null);
   }, [eventoInstalacion]);
 
-  function descartarInstalacion(): void {
-    localStorage.setItem(CLAVE_DESCARTE, '1');
-    setEventoInstalacion(null);
-    setAyudaIos(false);
-  }
-
-  const mostrarInstalacion = Boolean(eventoInstalacion) || ayudaIos;
-  if (!hayActualizacion && !listoOffline && !mostrarInstalacion) {
+  if (instalada && !hayActualizacion && !listoOffline) {
     return null;
   }
 
+  const instruccion = eventoInstalacion
+    ? 'Tenla a mano en el escritorio o en la pantalla de inicio, con acceso sin conexión.'
+    : esIos()
+      ? 'Toca «Compartir» y elige «Añadir a pantalla de inicio».'
+      : 'Abre el menú del navegador y elige «Instalar aplicación» o «Añadir a pantalla de inicio».';
+
   return (
-    <div className="pwa-avisos" role="status" aria-live="polite">
+    <div className="pwa-avisos">
+      {!instalada && (
+        <div className="pwa-instalar" aria-label="Instalar GlassView">
+          <img className="pwa-instalar-icono" src="/icons/pwa-192x192.png" alt="" />
+          <div className="pwa-instalar-texto">
+            <strong>Instala GlassView</strong>
+            <span>{instruccion}</span>
+          </div>
+          {eventoInstalacion && (
+            <button type="button" className="pwa-instalar-boton" onClick={() => void instalar()}>
+              Instalar
+            </button>
+          )}
+        </div>
+      )}
+
       {hayActualizacion && (
-        <div className="pwa-aviso">
+        <div className="pwa-aviso" role="status">
           <div className="pwa-aviso-texto">
             <strong>Nueva versión disponible</strong>
             <span>Actualiza para aplicar las últimas mejoras.</span>
@@ -132,51 +162,8 @@ export default function PwaAvisos(): JSX.Element | null {
         </div>
       )}
 
-      {eventoInstalacion && (
-        <div className="pwa-aviso">
-          <div className="pwa-aviso-texto">
-            <strong>Instala GlassView</strong>
-            <span>Tenla a mano en el escritorio o en la pantalla de inicio.</span>
-          </div>
-          <div className="pwa-aviso-acciones">
-            <button type="button" className="boton-primario" onClick={() => void instalar()}>
-              Instalar
-            </button>
-            <button
-              type="button"
-              className="pwa-aviso-cerrar"
-              aria-label="No volver a mostrar"
-              title="No volver a mostrar"
-              onClick={descartarInstalacion}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-
-      {ayudaIos && !eventoInstalacion && (
-        <div className="pwa-aviso">
-          <div className="pwa-aviso-texto">
-            <strong>Instálala en tu iPhone o iPad</strong>
-            <span>Toca «Compartir» y elige «Añadir a pantalla de inicio».</span>
-          </div>
-          <div className="pwa-aviso-acciones">
-            <button
-              type="button"
-              className="pwa-aviso-cerrar"
-              aria-label="Entendido"
-              title="Entendido"
-              onClick={descartarInstalacion}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-
       {listoOffline && (
-        <div className="pwa-aviso pwa-aviso-offline">
+        <div className="pwa-aviso pwa-aviso-offline" role="status">
           <div className="pwa-aviso-texto">
             <strong>Lista para abrir sin conexión</strong>
             <span>La app ya se abre sin internet; tus proyectos se cargan al volver la conexión.</span>
