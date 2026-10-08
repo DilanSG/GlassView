@@ -81,6 +81,8 @@ export interface IdentidadPieza {
   /** Sistema de ventanería (5020, 744, 8025...). */
   sistema: string;
   ref: string;
+  /** Descripción comercial («TUBO 2X1 LISO»), útil para deducir la sección. */
+  descripcion?: string;
 }
 
 /**

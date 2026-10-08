@@ -37,6 +37,10 @@ interface OpcionesElevacion {
   riel?: boolean;
   triangulo?: boolean;
   redondeado?: boolean;
+  /** Escalón de la cara exterior del perfil (ventana clásica). */
+  paso?: boolean;
+  /** Línea de rotura de puente térmico dentro de la cámara. */
+  termico?: boolean;
 }
 
 interface OpcionesSeccion {
@@ -46,6 +50,8 @@ interface OpcionesSeccion {
   labios?: boolean;
   redondeado?: boolean;
   triangulo?: boolean;
+  paso?: boolean;
+  termico?: boolean;
 }
 
 /**
@@ -76,7 +82,12 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
     Math.max(params.pared, Math.min(peralte, largo) * 0.09),
     peralte / 3.2,
   );
-  const radio = Math.min(opciones.redondeado ? peralte * 0.3 : params.radio, peralte / 3, largo / 3);
+  const radio = Math.min(
+    // Los tubos llevan esquinas apenas redondeadas, no un óvalo.
+    opciones.redondeado ? Math.min(peralte * 0.18, 0.35) : params.radio,
+    peralte / 3,
+    largo / 3,
+  );
   const acInterior = ctx.interior === 1 ? peralte : 0;
   const acExterior = ctx.interior === 1 ? 0 : peralte;
   const haciaDentro = ctx.interior === 1 ? -1 : 1;
@@ -154,6 +165,20 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
         }),
       );
     }
+    // Empaques de sellado a ambos lados de la garganta (labios del perfil).
+    const labioExterior = acInterior + haciaDentro * garganta * 0.16;
+    const labioInterior = acInterior + haciaDentro * garganta * 0.84;
+    primitivas.push(
+      lineaPerfil(mapeo, 0.25, labioExterior, largo - 0.25, labioExterior, {
+        tono: 'empaque',
+        grosor: Math.max(0.12, boca * 0.42),
+      }),
+      lineaPerfil(mapeo, 0.25, labioInterior, largo - 0.25, labioInterior, {
+        tono: 'empaque',
+        grosor: Math.max(0.1, boca * 0.3),
+        opacidad: 0.85,
+      }),
+    );
   }
 
   // Garganta centrada (perfiles horizontales de hoja): el vidrio entra por el centro
@@ -184,6 +209,17 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
         }),
       );
     }
+    // Empaques a los lados de la ranura central.
+    primitivas.push(
+      lineaPerfil(mapeo, 0.25, centro - garganta * 0.35, largo - 0.25, centro - garganta * 0.35, {
+        tono: 'empaque',
+        grosor: 0.12,
+      }),
+      lineaPerfil(mapeo, 0.25, centro + garganta * 0.35, largo - 0.25, centro + garganta * 0.35, {
+        tono: 'empaque',
+        grosor: 0.12,
+      }),
+    );
   }
 
   // Gotero exterior del cabezal (labio de escurrimiento)
@@ -219,6 +255,15 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
           tono: 'perfilDetalle',
           grosor: GROSOR_FINO,
           opacidad: 0.7,
+        }),
+      );
+      // Ranura de desagüe sobre la cara interior del sillar.
+      primitivas.push(
+        rectPerfil(mapeo, posicion, acInterior + haciaDentro * 0.06, Math.min(0.5, paso * 0.28), Math.max(0.12, peralte * 0.05), {
+          relleno: 'perfilOscuro',
+          tono: 'perfilDetalle',
+          grosor: GROSOR_FINO,
+          radio: 0.04,
         }),
       );
     }
@@ -273,6 +318,17 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
         tono: 'perfilBorde',
         grosor: GROSOR_FINO,
       }),
+    );
+    // Felpa de sellado sobre la cara del gancho.
+    primitivas.push(
+      lineaPerfil(
+        mapeo,
+        0.35,
+        acInterior + haciaDentro * (alto + punta) / 2,
+        largo * 0.68,
+        acInterior + haciaDentro * (alto + punta) / 2,
+        { tono: 'empaque', grosor: 0.14, opacidad: 0.85 },
+      ),
     );
   }
 
@@ -343,14 +399,47 @@ function elevacionPerfil(ctx: ContextoElevacion, opciones: OpcionesElevacion): P
     for (const posicion of [margenExtremo + separacion, largo - margenExtremo - separacion]) {
       if (posicion <= margenExtremo + 0.3 || posicion >= largo - margenExtremo - 0.3) continue;
       const punto = mapeo(posicion, centro);
+      const radioTornillo = Math.min(0.22, peralte * 0.11);
       primitivas.push(
-        circuloLocal(punto.x, punto.y, Math.min(0.22, peralte * 0.11), {
+        circuloLocal(punto.x, punto.y, radioTornillo, {
           relleno: 'perfilClaro',
           tono: 'perfilDetalle',
           grosor: GROSOR_FINO,
         }),
+        linea(punto.x - radioTornillo * 0.6, punto.y, punto.x + radioTornillo * 0.6, punto.y, {
+          tono: 'perfilDetalle',
+          grosor: GROSOR_FINO,
+          opacidad: 0.9,
+        }),
       );
     }
+  }
+
+  // Rotura de puente térmico: divide la cámara en los perfiles más anchos.
+  if (opciones.termico && opciones.canal === 'cerrado' && peralte > 3.2) {
+    const centroCamara = peralte / 2;
+    primitivas.push(
+      lineaPerfil(
+        mapeo,
+        margenExtremo + pared * 1.1,
+        centroCamara,
+        largo - margenExtremo - pared * 1.1,
+        centroCamara,
+        { tono: 'perfilClaro', grosor: GROSOR_FINO, opacidad: 0.8 },
+      ),
+    );
+  }
+
+  // Escalón de la cara exterior (perfil de ventana clásico).
+  if (opciones.paso) {
+    const yPaso = acExterior + haciaDentro * Math.min(peralte * 0.16, pared * 1.6);
+    primitivas.push(
+      lineaPerfil(mapeo, 0.12, yPaso, largo - 0.12, yPaso, {
+        tono: 'perfilBorde',
+        grosor: GROSOR_FINO,
+        opacidad: 0.75,
+      }),
+    );
   }
 
   // Ingletes de marco en los extremos
@@ -394,7 +483,11 @@ function seccionPerfil(ctx: ContextoSeccion, opciones: OpcionesSeccion): Primiti
     Math.max(params.pared, Math.min(peralte, anchoCara) * 0.09),
     Math.min(peralte, anchoCara) / 3.2,
   );
-  const radio = Math.min(opciones.redondeado ? peralte * 0.3 : params.radio, anchoCara / 3, peralte / 3);
+  const radio = Math.min(
+    opciones.redondeado ? Math.min(peralte * 0.18, 0.35) : params.radio,
+    anchoCara / 3,
+    peralte / 3,
+  );
 
   primitivas.push(
     rect(0, 0, anchoCara, peralte, {
@@ -466,6 +559,32 @@ function seccionPerfil(ctx: ContextoSeccion, opciones: OpcionesSeccion): Primiti
         grosor: 0,
       }),
     );
+
+    // Vidrio sentado en la garganta: asoma un poco fuera del perfil.
+    const grosorVidrio = Math.max(0.16, Math.min(boca * 0.5, 0.45));
+    const fondoGarganta = base + haciaDentro * garganta;
+    const bordeVidrio = base - haciaDentro * Math.min(0.55, peralte * 0.14);
+    primitivas.push(
+      rect(
+        (anchoCara - grosorVidrio) / 2,
+        Math.min(fondoGarganta, bordeVidrio),
+        grosorVidrio,
+        Math.abs(bordeVidrio - fondoGarganta),
+        { relleno: 'vidrio', tono: 'vidrioBorde', grosor: GROSOR_FINO, radio: 0.03 },
+      ),
+    );
+    // Empaques a los lados del vidrio.
+    const altoEmpaque = Math.abs(fondoGarganta - base) * 0.72;
+    primitivas.push(
+      rect((anchoCara - grosorVidrio) / 2 - 0.14, Math.min(base, fondoGarganta), 0.14, altoEmpaque, {
+        relleno: 'empaque',
+        grosor: 0,
+      }),
+      rect((anchoCara + grosorVidrio) / 2, Math.min(base, fondoGarganta), 0.14, altoEmpaque, {
+        relleno: 'empaque',
+        grosor: 0,
+      }),
+    );
   }
 
   if (opciones.labios) {
@@ -484,6 +603,30 @@ function seccionPerfil(ctx: ContextoSeccion, opciones: OpcionesSeccion): Primiti
         relleno: 'perfilClaro',
         tono: 'perfilBorde',
         grosor: GROSOR_FINO,
+      }),
+    );
+  }
+
+  // Rotura de puente térmico y escalón exterior, igual que en la elevación.
+  if (opciones.termico && opciones.canal === 'cerrado' && peralte > 3.2) {
+    primitivas.push(
+      linea(pared * 1.1, peralte / 2, anchoCara - pared * 1.1, peralte / 2, {
+        tono: 'perfilClaro',
+        grosor: GROSOR_FINO,
+        opacidad: 0.8,
+      }),
+    );
+  }
+
+  if (opciones.paso) {
+    const yPaso =
+      (ctx.interior === 1 ? 0 : peralte) +
+      (ctx.interior === 1 ? 1 : -1) * Math.min(peralte * 0.16, pared * 1.6);
+    primitivas.push(
+      linea(0.1, yPaso, anchoCara - 0.1, yPaso, {
+        tono: 'perfilBorde',
+        grosor: GROSOR_FINO,
+        opacidad: 0.75,
       }),
     );
   }
@@ -742,8 +885,16 @@ const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
   jamba: {
     etiqueta: 'Jamba',
     elevacion: (ctx) =>
-      elevacionPerfil(ctx, { canal: 'cerrado', inglete: true, garganta: true, tornillos: true }),
-    seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
+      elevacionPerfil(ctx, {
+        canal: 'cerrado',
+        inglete: true,
+        garganta: true,
+        tornillos: true,
+        paso: true,
+        termico: true,
+      }),
+    seccion: (ctx) =>
+      seccionPerfil(ctx, { garganta: true, canal: 'cerrado', paso: true, termico: true }),
   },
   cabezal: {
     etiqueta: 'Cabezal',
@@ -754,8 +905,11 @@ const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
         garganta: true,
         gotero: true,
         tornillos: true,
+        paso: true,
+        termico: true,
       }),
-    seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
+    seccion: (ctx) =>
+      seccionPerfil(ctx, { garganta: true, canal: 'cerrado', paso: true, termico: true }),
   },
   sillar: {
     etiqueta: 'Sillar',
@@ -766,8 +920,11 @@ const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
         garganta: true,
         peldano: true,
         tornillos: true,
+        paso: true,
+        termico: true,
       }),
-    seccion: (ctx) => seccionPerfil(ctx, { garganta: true, canal: 'cerrado' }),
+    seccion: (ctx) =>
+      seccionPerfil(ctx, { garganta: true, canal: 'cerrado', paso: true, termico: true }),
   },
   'canal-u': {
     etiqueta: 'Canal U',
@@ -781,8 +938,10 @@ const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
   },
   horizontal: {
     etiqueta: 'Horizontal',
-    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', gargantaCentro: true }),
-    seccion: (ctx) => seccionPerfil(ctx, { gargantaCentro: true, canal: 'cerrado' }),
+    elevacion: (ctx) =>
+      elevacionPerfil(ctx, { canal: 'cerrado', gargantaCentro: true, termico: true }),
+    seccion: (ctx) =>
+      seccionPerfil(ctx, { gargantaCentro: true, canal: 'cerrado', termico: true }),
   },
   enganche: {
     etiqueta: 'Enganche',
@@ -806,8 +965,8 @@ const DEFINICIONES: Record<ClasePieza, DefinicionPieza> = {
   },
   adaptador: {
     etiqueta: 'Adaptador',
-    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', peldano: true }),
-    seccion: (ctx) => seccionPerfil(ctx, { canal: 'cerrado' }),
+    elevacion: (ctx) => elevacionPerfil(ctx, { canal: 'cerrado', peldano: true, paso: true }),
+    seccion: (ctx) => seccionPerfil(ctx, { canal: 'cerrado', paso: true }),
   },
   empaque: {
     etiqueta: 'Empaque',

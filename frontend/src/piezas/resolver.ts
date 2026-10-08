@@ -14,13 +14,44 @@ export const PARAMETROS_POR_DEFECTO: ParametrosPerfil = {
 };
 
 /**
- * Overrides por REF y por sistema. El motor de geometría ya los consulta:
- * aquí se registrarán las secciones reales (Jamba 5020, Jamba 744...) sin
- * tocar el resto del sistema.
+ * Overrides por sistema: proporciones reales de cada línea del catálogo
+ * (según la nomenclatura y el uso del Excel de ventanería). Las puertas
+ * pesadas 7038 llevan paredes y gargantas mayores que las correderas
+ * livianas 5020/744 o que los tubulares de baño P.B.
  */
-const PARAMETROS_POR_REF: Record<string, Partial<ParametrosPerfil>> = {};
+const PARAMETROS_POR_SISTEMA: Record<string, Partial<ParametrosPerfil>> = {
+  '5020': { pared: 0.17, garganta: 1.05, boca: 0.38, radio: 0.08 },
+  '744': { pared: 0.17, garganta: 1.05, boca: 0.38, radio: 0.08 },
+  '8025': { pared: 0.19, garganta: 1.15, boca: 0.42, radio: 0.09 },
+  '7038': { pared: 0.24, garganta: 1.5, boca: 0.55, radio: 0.12 },
+  '3831': { pared: 0.16, garganta: 1, boca: 0.36, radio: 0.07 },
+  'P.B.': { pared: 0.13, garganta: 0.8, boca: 0.3, radio: 0.16 },
+  ACR: { pared: 0.12, garganta: 0.7, boca: 0.28, radio: 0.14 },
+};
 
-const PARAMETROS_POR_SISTEMA: Record<string, Partial<ParametrosPerfil>> = {};
+/**
+ * Overrides por REF para los perfiles con geometría más característica:
+ * el sillar lleva el asiento del vidrio más profundo, el traslape una boca
+ * menor (solape) y la serie 7038 paredes de puerta.
+ */
+const PARAMETROS_POR_REF: Record<string, Partial<ParametrosPerfil>> = {
+  'ALNA-144': { garganta: 1.1, boca: 0.4 },
+  'ALNA-194': { garganta: 1.25, boca: 0.42 },
+  'ALNB-193': { garganta: 1.05, boca: 0.38 },
+  'ALNB-147': { garganta: 1, boca: 0.36 },
+  'ALNA-192': { garganta: 0.95, boca: 0.34 },
+  'ALNA-349': { garganta: 1, boca: 0.36 },
+  'ALN-581': { pared: 0.2, garganta: 1.3, boca: 0.5 },
+  'ALN-700': { pared: 0.26, garganta: 1.6, boca: 0.6, radio: 0.13 },
+  'ALN-775': { pared: 0.27, garganta: 1.7, boca: 0.62, radio: 0.13 },
+  'ALN-702': { pared: 0.25, garganta: 1.55, boca: 0.58, radio: 0.12 },
+  'ALN-705': { pared: 0.24, garganta: 1.5, boca: 0.56, radio: 0.12 },
+  'ALN-704': { pared: 0.23, garganta: 1.45, boca: 0.54, radio: 0.12 },
+  'ALN-703': { pared: 0.24, garganta: 1.5, boca: 0.56, radio: 0.12 },
+  'ALN-1101': { pared: 0.14, garganta: 0.85, boca: 0.32, radio: 0.2 },
+  'ALN-1102': { pared: 0.14, garganta: 0.85, boca: 0.32, radio: 0.2 },
+  'ALN-403': { pared: 0.14, garganta: 0.8, boca: 0.3, radio: 0.2 },
+};
 
 export function parametrosDe(identidad: IdentidadPieza): ParametrosPerfil {
   return {
@@ -28,6 +59,49 @@ export function parametrosDe(identidad: IdentidadPieza): ParametrosPerfil {
     ...(PARAMETROS_POR_SISTEMA[identidad.sistema] ?? {}),
     ...(PARAMETROS_POR_REF[identidad.ref] ?? {}),
   };
+}
+
+/** Convierte una medida en pulgadas («1 1/2», «3/4», «2») a centímetros. */
+function pulgadasACm(texto: string): number {
+  const mixto = texto.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixto) {
+    return (Number(mixto[1]) + Number(mixto[2]) / Number(mixto[3])) * 2.54;
+  }
+  const fraccion = texto.match(/^(\d+)\/(\d+)$/);
+  if (fraccion) {
+    return (Number(fraccion[1]) / Number(fraccion[2])) * 2.54;
+  }
+  const entero = texto.match(/^(\d+(?:[.,]\d+)?)$/);
+  return entero ? Number(entero[1].replace(',', '.')) * 2.54 : 0;
+}
+
+const MEDIDA_PULGADAS = String.raw`\d+\/\d+|\d+(?:\s+\d+\/\d+)?`;
+
+/**
+ * Medidas reales de un tubo (ancho de cara × peralte, en cm) a partir de su
+ * descripción comercial del Excel: «TUBO 2X1», «1 1/2 X 1 1/2», «3/4 liso»…
+ */
+export function medidasTuboDeTexto(
+  texto: string,
+): { anchoCara: number; peralte: number } | null {
+  const limpio = texto.toUpperCase().replace(/[«»]/g, ' ').replace(/\s+/g, ' ').trim();
+  const par = limpio.match(new RegExp(`(${MEDIDA_PULGADAS})\\s*X\\s*(${MEDIDA_PULGADAS})`));
+  if (par) {
+    const ladoA = pulgadasACm(par[1].trim());
+    const ladoB = pulgadasACm(par[2].trim());
+    if (ladoA > 0 && ladoB > 0 && ladoA < 25 && ladoB < 25) {
+      return { anchoCara: Math.max(ladoA, ladoB), peralte: Math.min(ladoA, ladoB) };
+    }
+  }
+  // Tubo cuadrado de una sola medida: «3/4 liso», «5/8 (1)»…
+  const simple = limpio.match(new RegExp(`(${MEDIDA_PULGADAS})`));
+  if (simple) {
+    const lado = pulgadasACm(simple[1].trim());
+    if (lado > 0.8 && lado < 12) {
+      return { anchoCara: lado, peralte: lado };
+    }
+  }
+  return null;
 }
 
 const PATRONES_DESCRIPCION: Array<[RegExp, ClasePieza]> = [
@@ -107,16 +181,29 @@ export function resolverIdentidad(
       categoria: 'vidrio',
       sistema: '',
       ref: pieza.ref,
+      descripcion: pieza.descripcion,
     };
   }
 
   if (tipo === 'rodachina') {
-    return { clase: 'rodachina', categoria: 'rodachina', sistema: '', ref: pieza.ref };
+    return {
+      clase: 'rodachina',
+      categoria: 'rodachina',
+      sistema: '',
+      ref: pieza.ref,
+      descripcion: pieza.descripcion,
+    };
   }
 
   if (tipo === 'manija') {
     const clase: ClasePieza = /SEGURO/i.test(descripcion) ? 'seguro' : 'manija';
-    return { clase, categoria: 'manija', sistema: '', ref: pieza.ref };
+    return {
+      clase,
+      categoria: 'manija',
+      sistema: '',
+      ref: pieza.ref,
+      descripcion: pieza.descripcion,
+    };
   }
 
   const perfil = perfiles.find(
@@ -128,6 +215,7 @@ export function resolverIdentidad(
       categoria: perfil.categoria,
       sistema: perfil.sistema,
       ref: perfil.ref,
+      descripcion: perfil.descripcion,
     };
   }
 
@@ -137,6 +225,7 @@ export function resolverIdentidad(
     categoria: tipo === 'perfil' ? 'otro' : tipo,
     sistema: '',
     ref: pieza.ref,
+    descripcion: pieza.descripcion,
   };
 }
 
@@ -147,6 +236,7 @@ export function identidadDePerfil(perfil: PerfilVentaneria): IdentidadPieza {
     categoria: perfil.categoria,
     sistema: perfil.sistema,
     ref: perfil.ref,
+    descripcion: perfil.descripcion,
   };
 }
 
@@ -201,17 +291,17 @@ const PERALTE_PREVIA: Record<ClasePieza, number> = {
 const PROPORCION_CARA: Record<ClasePieza, number> = {
   vidrio: 24,
   acrilico: 24,
-  jamba: 1.35,
-  cabezal: 1.5,
-  sillar: 1.7,
+  jamba: 0.95,
+  cabezal: 1.05,
+  sillar: 1.15,
   'canal-u': 1,
   riel: 1.05,
-  horizontal: 1.4,
-  enganche: 1.3,
-  traslape: 1.6,
+  horizontal: 1,
+  enganche: 0.95,
+  traslape: 1.05,
   tubo: 1,
   pisavidrio: 1.6,
-  adaptador: 1.8,
+  adaptador: 1.1,
   empaque: 3.4,
   felpa: 4.4,
   rodachina: 1,
@@ -221,10 +311,25 @@ const PROPORCION_CARA: Record<ClasePieza, number> = {
   perfil: 1.2,
 };
 
+/** Medidas comerciales de tubos y canales U a partir de su descripción. */
+function medidasComerciales(
+  identidad: IdentidadPieza,
+): { anchoCara: number; peralte: number } | null {
+  if (identidad.clase !== 'tubo' && identidad.clase !== 'canal-u') {
+    return null;
+  }
+  return medidasTuboDeTexto(`${identidad.ref} ${identidad.descripcion ?? ''}`);
+}
+
 export function dimensionesSeccionPrevia(identidad: IdentidadPieza): {
   anchoCara: number;
   peralte: number;
 } {
+  // Los tubos y canales llevan su medida real en la descripción del Excel.
+  const medidas = medidasComerciales(identidad);
+  if (medidas) {
+    return medidas;
+  }
   const peralte = PERALTE_PREVIA[identidad.clase] ?? 4.5;
   return { anchoCara: peralte * (PROPORCION_CARA[identidad.clase] ?? 1.2), peralte };
 }
@@ -233,6 +338,11 @@ export function dimensionesSeccionDePieza(
   pieza: PiezaPlano,
   identidad: IdentidadPieza,
 ): { anchoCara: number; peralte: number } {
+  // En tubos y canales manda la medida comercial de la REF.
+  const medidas = medidasComerciales(identidad);
+  if (medidas) {
+    return medidas;
+  }
   const peralte =
     pieza.orientacion === 'horizontal'
       ? Math.max(pieza.altoCm, 0.4)

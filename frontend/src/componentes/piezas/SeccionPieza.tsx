@@ -76,7 +76,7 @@ export default function SeccionPieza({
     };
   }, [identidad, params, interior, pieza]);
 
-  const margen = Math.max(anchoCara, peralte) * 0.1;
+  const margen = Math.max(anchoCara, peralte) * 0.18;
   const viewBox = `${-margen} ${-margen} ${anchoCara + margen * 2} ${peralte + margen * 2}`;
 
   return (
